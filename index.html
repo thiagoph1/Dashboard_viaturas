@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Análise de Planilha</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .upload-section {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        #fileInput {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #dashboard {
+            display: none;
+        }
+        .chart-container {
+            margin-top: 20px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .summary {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .summary p {
+            font-size: 1.2em;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dashboard de Análise de Planilha</h1>
+        <div class="upload-section">
+            <input type="file" id="fileInput" accept=".xlsx, .xls">
+        </div>
+        <div id="dashboard">
+            <div class="summary">
+                <p>Total de Registros: <span id="totalRecords">0</span></p>
+                <p>Valor Total: <span id="totalValue">0</span></p>
+                <p>Resumo de Unidade: <span id="unitSummary">Nenhuma unidade encontrada</span></p>
+            </div>
+            <div class="chart-container">
+                <canvas id="monthlyChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="unitChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+    <script>
+        document.getElementById('fileInput').addEventListener('change', handleFile);
+
+        function handleFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                processData(jsonData);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processData(data) {
+            if (!data || data.length === 0) {
+                alert('Nenhum dado encontrado na planilha!');
+                return;
+            }
+
+            // Log para verificar os dados
+            console.log('Dados da planilha:', data);
+
+            // Cálculos gerais
+            const totalRecords = data.length;
+            const totalValue = data.reduce((sum, row) => sum + (Number(row.Valor) || 0), 0);
+
+            // Processar Unidade (texto)
+            const unitCount = {};
+            let hasUnitColumn = false;
+
+            data.forEach(row => {
+                if (row.Unidade !== undefined && row.Unidade !== null) {
+                    hasUnitColumn = true;
+                    const unit = String(row.Unidade).trim();
+                    if (unit) {
+                        unitCount[unit] = (unitCount[unit] || 0) + 1;
+                    }
+                }
+            });
+
+            // Log para verificar o processamento de Unidade
+            console.log('Contagem de Unidades:', unitCount);
+            console.log('Coluna Unidade encontrada:', hasUnitColumn);
+
+            // Atualizar resumo de Unidade
+            const unitSummaryEl = document.getElementById('unitSummary');
+            if (hasUnitColumn && Object.keys(unitCount).length > 0) {
+                const summaryText = Object.entries(unitCount)
+                    .map(([unit, count]) => `${unit}: ${count}`)
+                    .join(', ');
+                unitSummaryEl.textContent = summaryText;
+            } else {
+                unitSummaryEl.textContent = 'Nenhuma unidade válida encontrada';
+            }
+
+            // Atualizar dashboard
+            document.getElementById('totalRecords').textContent = totalRecords;
+            document.getElementById('totalValue').textContent = totalValue.toFixed(2);
+            document.getElementById('dashboard').style.display = 'block';
+
+            // Gráfico de valores por mês
+            const monthlyData = {};
+            data.forEach(row => {
+                if (row.Data) {
+                    const date = new Date(row.Data);
+                    if (!isNaN(date)) {
+                        const monthYear = `${date.getMonth() + 1}/${date.getFullYear()}`;
+                        monthlyData[monthYear] = (monthlyData[monthYear] || 0) + (Number(row.Valor) || 0);
+                    }
+                }
+            });
+
+            const ctxMonthly = document.getElementById('monthlyChart').getContext('2d');
+            new Chart(ctxMonthly, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(monthlyData),
+                    datasets: [{
+                        label: 'Valor por Mês',
+                        data: Object.values(monthlyData),
+                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Valor (R$)' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Mês/Ano' }
+                        }
+                    }
+                }
+            });
+
+            // Gráfico de barras para Unidade
+            const ctxUnit = document.getElementById('unitChart').getContext('2d');
+            if (hasUnitColumn && Object.keys(unitCount).length > 0) {
+                new Chart(ctxUnit, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(unitCount),
+                        datasets: [{
+                            label: 'Contagem por Unidade',
+                            data: Object.values(unitCount),
+                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Número de Registros' }
+                            },
+                            x: {
+                                title: { display: true, text: 'Unidade' }
+                            }
+                        }
+                    }
+                });
+            } else {
+                ctxUnit.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
