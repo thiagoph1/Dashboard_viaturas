@@ -481,6 +481,7 @@
         }
 
         function processAvailabilityData() {
+            console.log('Processando dados de disponibilidade...');
             const availabilityData = {};
             let hasUnitColumn = false;
             let hasStatusColumn = false;
@@ -511,7 +512,7 @@
                 total: availabilityData[unit].available + availabilityData[unit].unavailable,
                 available: availabilityData[unit].available,
                 unavailable: availabilityData[unit].unavailable
-            })).sort((a, b) => b.total - a.total);
+            })).sort((a, b) => b.total - a.total || a.unit.localeCompare(b.unit)); // Desempate por unit
 
             // Log dos dados ordenados
             console.log('Dados de Disponibilidade por OM ordenados por total:');
@@ -520,6 +521,29 @@
             });
 
             return { availabilityData, hasUnitColumn, hasStatusColumn, sortedUnits };
+        }
+
+        function renderTable(sortedData) {
+            console.log('Renderizando tabela com dados:', sortedData);
+            const tbody = document.getElementById('availabilityTableBody');
+            tbody.innerHTML = '';
+
+            if (sortedData.length === 0) {
+                console.log('Nenhum dado para renderizar na tabela.');
+                document.getElementById('analysisError').textContent = 'Sem dados válidos para exibir na tabela. Verifique as colunas "Unidade" e "Status Patrimonio".';
+                return;
+            }
+
+            sortedData.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.unit}</td>
+                    <td>${item.available}</td>
+                    <td>${item.unavailable}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            document.getElementById('analysisError').textContent = '';
         }
 
         function sortTable(column) {
@@ -531,6 +555,12 @@
 
             // Processar dados
             const { hasUnitColumn, hasStatusColumn, sortedUnits } = processAvailabilityData();
+
+            if (!hasUnitColumn || !hasStatusColumn) {
+                console.log('Erro: Colunas Unidade ou Status Patrimonio ausentes.');
+                document.getElementById('analysisError').textContent = 'Erro: Colunas "Unidade" ou "Status Patrimonio" não encontradas.';
+                return;
+            }
 
             // Ordenar dados
             let sortedData = [...sortedUnits];
@@ -549,20 +579,19 @@
                     }
                     return direction === 'asc' ? comparison : -comparison;
                 });
+            } else {
+                // Caso padrão (total)
+                sortedData.sort((a, b) => {
+                    let comparison = b.total - a.total;
+                    if (comparison === 0) {
+                        comparison = a.unit.localeCompare(b.unit);
+                    }
+                    return comparison;
+                });
             }
 
-            // Atualizar tabela
-            const tbody = document.getElementById('availabilityTableBody');
-            tbody.innerHTML = '';
-            sortedData.forEach(item => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${item.unit}</td>
-                    <td>${item.available}</td>
-                    <td>${item.unavailable}</td>
-                `;
-                tbody.appendChild(row);
-            });
+            // Renderizar tabela
+            renderTable(sortedData);
 
             // Atualizar indicadores de ordenação
             document.getElementById('sortIndicatorUnit').textContent = (column === 'unit' ? (direction === 'asc' ? '↑' : '↓') : '');
@@ -572,9 +601,12 @@
 
         function showAvailabilityTable() {
             if (!planilhaData) {
+                console.log('Erro: Nenhum dado carregado.');
                 document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload de uma planilha.';
                 return;
             }
+
+            console.log('Mostrando tabela de Disponibilidade por OM...');
 
             // Esconder gráficos
             document.getElementById('unitChartContainer').classList.remove('active');
@@ -595,22 +627,62 @@
             // Mostrar tabela e botão "Gerar Gráfico"
             document.getElementById('availabilityTable').classList.add('active');
             document.getElementById('availabilityChart').classList.remove('active');
+            document.getElementById('availabilityTableContainer').classList.add('active');
             document.getElementById('generateChartButton').style.display = 'inline-block';
             document.getElementById('backToTableButton').style.display = 'none';
 
-            // Processar dados e renderizar tabela com ordenação inicial
-            sortTable(currentSort.column);
+            // Processar dados
+            const { hasUnitColumn, hasStatusColumn, sortedUnits } = processAvailabilityData();
+
+            // Renderizar tabela com ordenação atual
+            let sortedData = [...sortedUnits];
+            if (currentSort.column === 'unit') {
+                sortedData.sort((a, b) => {
+                    const comparison = a.unit.localeCompare(b.unit);
+                    return currentSort.direction === 'asc' ? comparison : -comparison;
+                });
+            } else if (currentSort.column === 'available' || currentSort.column === 'unavailable') {
+                sortedData.sort((a, b) => {
+                    const valueA = a[currentSort.column];
+                    const valueB = b[currentSort.column];
+                    let comparison = valueA - valueB;
+                    if (comparison === 0) {
+                        comparison = a.unit.localeCompare(b.unit);
+                    }
+                    return currentSort.direction === 'asc' ? comparison : -comparison;
+                });
+            } else {
+                // Padrão: total, decrescente
+                sortedData.sort((a, b) => {
+                    let comparison = b.total - a.total;
+                    if (comparison === 0) {
+                        comparison = a.unit.localeCompare(b.unit);
+                    }
+                    return comparison;
+                });
+            }
+
+            renderTable(sortedData);
+
+            // Atualizar indicadores de ordenação
+            document.getElementById('sortIndicatorUnit').textContent = (currentSort.column === 'unit' ? (currentSort.direction === 'asc' ? '↑' : '↓') : '');
+            document.getElementById('sortIndicatorAvailable').textContent = (currentSort.column === 'available' ? (currentSort.direction === 'asc' ? '↑' : '↓') : '');
+            document.getElementById('sortIndicatorUnavailable').textContent = (currentSort.column === 'unavailable' ? (currentSort.direction === 'asc' ? '↑' : '↓') : '');
         }
 
         function showAvailabilityChart() {
             if (!planilhaData) {
+                console.log('Erro: Nenhum dado carregado.');
                 document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload de uma planilha.';
                 return;
             }
 
+            console.log('Mostrando gráfico de Disponibilidade por OM...');
+
             // Esconder tabela e mostrar gráfico
             document.getElementById('availabilityTable').classList.remove('active');
             document.getElementById('availabilityChart').classList.add('active');
+            document.getElementById('availabilityTableContainer').classList.add('active');
             document.getElementById('generateChartButton').style.display = 'none';
             document.getElementById('backToTableButton').style.display = 'inline-block';
 
@@ -674,12 +746,11 @@
                         }
                     }
                 });
-                document.getElementById('availabilityTableContainer').classList.add('active');
                 document.getElementById('analysisError').textContent = '';
             } else {
                 console.log('Gráfico de Disponibilidade não renderizado: sem dados válidos');
                 ctxAvailability.fillText('Sem dados para exibir', 10, 50);
-                document.getElementById('availabilityTableContainer').classList.add('active');
+                document.getElementById('analysisError').textContent = 'Sem dados válidos para exibir no gráfico. Verifique as colunas "Unidade" e "Status Patrimonio".';
             }
         }
     </script>
