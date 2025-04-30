@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard de Análise de Planilha 2</title>
+    <title>Dashboard de Análise de Planilha</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -72,10 +72,18 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
     <script>
-        // Aguarde o carregamento do Chart.js antes de processar
+        // Aguarde o carregamento dos scripts
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOMContentLoaded: Verificando Chart.js...');
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js não carregou. Verifique a CDN.');
+                document.getElementById('monthlyChart').getContext('2d').fillText('Erro: Chart.js não carregado', 10, 50);
+                document.getElementById('unitChart').getContext('2d').fillText('Erro: Chart.js não carregado', 10, 50);
+            } else {
+                console.log('Chart.js carregado com sucesso.');
+            }
             document.getElementById('fileInput').addEventListener('change', handleFile);
         });
 
@@ -142,6 +150,12 @@
             document.getElementById('totalRecords').textContent = totalRecords;
             document.getElementById('totalValue').textContent = totalValue.toFixed(2);
             document.getElementById('dashboard').style.display = 'block';
+
+            // Verificar se Chart está disponível
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js não disponível para criar gráficos.');
+                return;
+            }
 
             // Gráfico de valores por mês
             const monthlyData = {};
@@ -213,7 +227,7 @@
                 });
             } else {
                 console.log('Gráfico de Unidade não renderizado: sem dados válidos');
-                ctxUnit.getContext('2d').fillText('Sem dados para exibir', 10, 50);
+                ctxUnit.fillText('Sem dados para exibir', 10, 50);
             }
         }
     </script>
