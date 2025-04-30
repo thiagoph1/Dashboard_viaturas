@@ -74,7 +74,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
     <script>
-        document.getElementById('fileInput').addEventListener('change', handleFile);
+        // Aguarde o carregamento do Chart.js antes de processar
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('fileInput').addEventListener('change', handleFile);
+        });
 
         function handleFile(event) {
             const file = event.target.files[0];
@@ -152,6 +155,8 @@
                 }
             });
 
+            console.log('Dados do gráfico mensal:', monthlyData);
+
             const ctxMonthly = document.getElementById('monthlyChart').getContext('2d');
             new Chart(ctxMonthly, {
                 type: 'bar',
@@ -179,6 +184,7 @@
             });
 
             // Gráfico de barras para Unidade
+            console.log('Tentando renderizar gráfico de Unidade com dados:', unitCount);
             const ctxUnit = document.getElementById('unitChart').getContext('2d');
             if (hasUnitColumn && Object.keys(unitCount).length > 0) {
                 new Chart(ctxUnit, {
@@ -206,7 +212,8 @@
                     }
                 });
             } else {
-                ctxUnit.style.display = 'none';
+                console.log('Gráfico de Unidade não renderizado: sem dados válidos');
+                ctxUnit.getContext('2d').fillText('Sem dados para exibir', 10, 50);
             }
         }
     </script>
