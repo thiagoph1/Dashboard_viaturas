@@ -1,0 +1,49 @@
+[debug] [2025-04-30T14:03:46.360Z] ----------------------------------------------------------------------
+[debug] [2025-04-30T14:03:46.363Z] Command:       /nix/store/ixbb20farqh1f4fqbmsn6b1ixn8mc8ij-nodejs-20.18.1/bin/node /nix/store/984bjqzf7prsischdc86jmqbn4ha5yxd-firebase-tools-14.2.0/lib/node_modules/firebase-tools/lib/bin/firebase.js init hosting
+[debug] [2025-04-30T14:03:46.363Z] CLI Version:   14.2.0
+[debug] [2025-04-30T14:03:46.363Z] Platform:      linux
+[debug] [2025-04-30T14:03:46.364Z] Node Version:  v20.18.1
+[debug] [2025-04-30T14:03:46.364Z] Time:          Wed Apr 30 2025 14:03:46 GMT+0000 (Coordinated Universal Time)
+[debug] [2025-04-30T14:03:46.364Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-04-30T14:03:46.371Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-04-30T14:03:46.371Z] > authorizing via signed-in user (tiagofelipe15@gmail.com)
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  /home/user/Dashboard_viaturas
+
+[info] 
+=== Project Setup
+[info] 
+[info] First, let's associate this project directory with a Firebase project.
+[info] You can create multiple project aliases by running firebase use --add, 
+[info] but for now we'll just set up a default project.
+[info] 
+[debug] [2025-04-30T14:03:54.068Z] Checked if tokens are valid: true, expires at: 1746024586919
+[debug] [2025-04-30T14:03:54.069Z] Checked if tokens are valid: true, expires at: 1746024586919
+[debug] [2025-04-30T14:03:54.073Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=100
+[debug] [2025-04-30T14:03:54.884Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2025-04-30T14:03:54.885Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[info] i  Using project dashboad-vi (dashboad-vi) 
+[info] 
+=== Hosting Setup
+[debug] [2025-04-30T14:03:56.500Z] Checked if tokens are valid: true, expires at: 1746024586919
+[debug] [2025-04-30T14:03:56.500Z] Checked if tokens are valid: true, expires at: 1746024586919
+[debug] [2025-04-30T14:03:56.501Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/dashboad-vi [none]
+[debug] [2025-04-30T14:03:56.749Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/dashboad-vi 200
+[debug] [2025-04-30T14:03:56.749Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/dashboad-vi {"projectId":"dashboad-vi","projectNumber":"733002924376","displayName":"dashboad-vi","name":"projects/dashboad-vi","resources":{"hostingSite":"dashboad-vi"},"state":"ACTIVE","etag":"1_e8c64481-771e-404c-aa9d-87b8f607c121"}
+[info] 
+[info] i  Detected a .git folder at /home/user/Dashboard_viaturas 
+[info] i  Authorizing with GitHub to upload your service account to a GitHub repository's secrets store. 
+[info] 
+[info] Visit this URL on this device to log in:
+[info] https://github.com/login/oauth/authorize?client_id=89cf50f02ac6aaed3484&state=564110981&redirect_uri=http%3A%2F%2Flocalhost%3A9005&scope=read%3Auser%20repo%20public_repo
+[info] 
+[info] Waiting for authentication...
