@@ -22,6 +22,12 @@
             text-align: center;
             color: #333;
         }
+        .screen {
+            display: none;
+        }
+        .screen.active {
+            display: block;
+        }
         .upload-section {
             margin-bottom: 20px;
             text-align: center;
@@ -30,15 +36,18 @@
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 4px;
+            margin-right: 10px;
         }
-        #dashboard {
-            display: none;
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
         }
-        .chart-container {
-            margin-top: 20px;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
+        button:hover {
+            background-color: #45a049;
         }
         .summary {
             margin-bottom: 20px;
@@ -47,6 +56,23 @@
         .summary p {
             font-size: 1.2em;
             color: #555;
+        }
+        .button-section {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .button-section button {
+            margin: 0 10px;
+        }
+        .chart-container {
+            margin-top: 20px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            display: none;
+        }
+        .chart-container.active {
+            display: block;
         }
         .error-message {
             color: red;
@@ -58,73 +84,123 @@
 <body>
     <div class="container">
         <h1>Dashboard de Análise de Planilha</h1>
-        <div class="upload-section">
-            <input type="file" id="fileInput" accept=".xlsx, .xls">
+
+        <!-- Primeira Tela: Upload da Planilha -->
+        <div id="uploadScreen" class="screen active">
+            <div class="upload-section">
+                <input type="file" id="fileInput" accept=".xlsx, .xls">
+                <button onclick="processFile()">Carregar Planilha</button>
+            </div>
+            <div id="uploadError" class="error-message"></div>
         </div>
-        <div id="dashboard">
+
+        <!-- Segunda Tela: Seleção de Funções -->
+        <div id="analysisScreen" class="screen">
             <div class="summary">
                 <p>Total de Registros: <span id="totalRecords">0</span></p>
-                <p>Valor Total: <span id="totalValue">0</span></p>
-                <p>Resumo de Unidade: <span id="unitSummary">Nenhuma unidade encontrada</span></p>
             </div>
-            <div class="chart-container">
-                <canvas id="monthlyChart"></canvas>
+            <div class="button-section">
+                <button onclick="showUnitCountChart()">Análise das Quantidades por Unidade</button>
+                <!-- Espaço para futuros botões -->
             </div>
-            <div class="chart-container">
+            <div class="chart-container" id="unitChartContainer">
                 <canvas id="unitChart"></canvas>
             </div>
+            <button onclick="goBack()">Voltar</button>
+            <div id="analysisError" class="error-message"></div>
         </div>
-        <div id="errorMessage" class="error-message"></div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        let planilhaData = null; // Armazena os dados da planilha
+        let unitChartInstance = null; // Armazena a instância do gráfico
+
         document.addEventListener('DOMContentLoaded', () => {
             console.log('DOMContentLoaded: Verificando Chart.js...');
             if (typeof Chart === 'undefined') {
-                console.error('Chart.js não carregou. Verifique se chart.min.js está na mesma pasta.');
-                document.getElementById('errorMessage').textContent = 'Erro: Chart.js não carregado. Verifique se o arquivo chart.min.js está na pasta do projeto.';
-                document.getElementById('monthlyChart').getContext('2d').fillText('Erro: Chart.js não carregado', 10, 50);
-                document.getElementById('unitChart').getContext('2d').fillText('Erro: Chart.js não carregado', 10, 50);
+                console.error('Chart.js não carregou. Verifique a conexão com a CDN.');
+                document.getElementById('uploadError').textContent = 'Erro: Chart.js não carregado. Verifique sua conexão com a internet.';
             } else {
                 console.log('Chart.js carregado com sucesso.');
             }
-            document.getElementById('fileInput').addEventListener('change', handleFile);
         });
 
-        function handleFile(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+        function processFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            if (!file) {
+                document.getElementById('uploadError').textContent = 'Por favor, selecione um arquivo Excel.';
+                return;
+            }
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-                const sheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    planilhaData = XLSX.utils.sheet_to_json(worksheet);
 
-                processData(jsonData);
+                    if (!planilhaData || planilhaData.length === 0) {
+                        document.getElementById('uploadError').textContent = 'Nenhum dado encontrado na planilha!';
+                        return;
+                    }
+
+                    console.log('Dados da planilha:', planilhaData);
+                    showAnalysisScreen();
+                } catch (error) {
+                    console.error('Erro ao processar a planilha:', error);
+                    document.getElementById('uploadError').textContent = 'Erro ao processar a planilha. Verifique o formato do arquivo.';
+                }
             };
             reader.readAsArrayBuffer(file);
         }
 
-        function processData(data) {
-            if (!data || data.length === 0) {
-                alert('Nenhum dado encontrado na planilha!');
+        function showAnalysisScreen() {
+            // Calcular resumo
+            const totalRecords = planilhaData.length;
+
+            // Atualizar resumo
+            document.getElementById('totalRecords').textContent = totalRecords;
+
+            // Esconder tela de upload e mostrar tela de análise
+            document.getElementById('uploadScreen').classList.remove('active');
+            document.getElementById('analysisScreen').classList.add('active');
+            document.getElementById('uploadError').textContent = '';
+            document.getElementById('unitChartContainer').classList.remove('active');
+            if (unitChartInstance) {
+                unitChartInstance.destroy();
+                unitChartInstance = null;
+            }
+        }
+
+        function goBack() {
+            // Manter planilhaData e voltar para a tela de análise
+            if (planilhaData) {
+                showAnalysisScreen();
+            } else {
+                // Caso excepcional: sem dados, voltar para upload
+                document.getElementById('analysisScreen').classList.remove('active');
+                document.getElementById('uploadScreen').classList.add('active');
+                document.getElementById('fileInput').value = '';
+                document.getElementById('analysisError').textContent = '';
+            }
+        }
+
+        function showUnitCountChart() {
+            if (!planilhaData) {
+                document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload de uma planilha.';
                 return;
             }
 
-            console.log('Dados da planilha:', data);
-
-            const totalRecords = data.length;
-            const totalValue = data.reduce((sum, row) => sum + (Number(row.Valor) || 0), 0);
-
+            // Processar Unidade para o gráfico
             const unitCount = {};
             let hasUnitColumn = false;
 
-            data.forEach(row => {
+            planilhaData.forEach(row => {
                 if (row.Unidade !== undefined && row.Unidade !== null) {
                     hasUnitColumn = true;
                     const unit = String(row.Unidade).trim();
@@ -137,69 +213,21 @@
             console.log('Contagem de Unidades:', unitCount);
             console.log('Coluna Unidade encontrada:', hasUnitColumn);
 
-            const unitSummaryEl = document.getElementById('unitSummary');
-            if (hasUnitColumn && Object.keys(unitCount).length > 0) {
-                const summaryText = Object.entries(unitCount)
-                    .map(([unit, count]) => `${unit}: ${count}`)
-                    .join(', ');
-                unitSummaryEl.textContent = summaryText;
-            } else {
-                unitSummaryEl.textContent = 'Nenhuma unidade válida encontrada';
-            }
-
-            document.getElementById('totalRecords').textContent = totalRecords;
-            document.getElementById('totalValue').textContent = totalValue.toFixed(2);
-            document.getElementById('dashboard').style.display = 'block';
-
+            // Verificar Chart.js
             if (typeof Chart === 'undefined') {
-                console.error('Chart.js não disponível para criar gráficos.');
-                document.getElementById('errorMessage').textContent = 'Erro: Não foi possível criar os gráficos. Verifique chart.min.js.';
+                console.error('Chart.js não disponível para criar gráfico.');
+                document.getElementById('analysisError').textContent = 'Erro: Não foi possível criar o gráfico. Verifique a conexão com a CDN.';
                 return;
             }
 
-            const monthlyData = {};
-            data.forEach(row => {
-                if (row.Data) {
-                    const date = new Date(row.Data);
-                    if (!isNaN(date)) {
-                        const monthYear = `${date.getMonth() + 1}/${date.getFullYear()}`;
-                        monthlyData[monthYear] = (monthlyData[monthYear] || 0) + (Number(row.Valor) || 0);
-                    }
-                }
-            });
-
-            console.log('Dados do gráfico mensal:', monthlyData);
-
-            const ctxMonthly = document.getElementById('monthlyChart').getContext('2d');
-            new Chart(ctxMonthly, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(monthlyData),
-                    datasets: [{
-                        label: 'Valor por Mês',
-                        data: Object.values(monthlyData),
-                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: { display: true, text: 'Valor (R$)' }
-                        },
-                        x: {
-                            title: { display: true, text: 'Mês/Ano' }
-                        }
-                    }
-                }
-            });
-
-            console.log('Tentando renderizar gráfico de Unidade com dados:', unitCount);
+            // Gráfico de Contagem por Unidade
             const ctxUnit = document.getElementById('unitChart').getContext('2d');
+            if (unitChartInstance) {
+                unitChartInstance.destroy();
+            }
+
             if (hasUnitColumn && Object.keys(unitCount).length > 0) {
-                new Chart(ctxUnit, {
+                unitChartInstance = new Chart(ctxUnit, {
                     type: 'bar',
                     data: {
                         labels: Object.keys(unitCount),
@@ -223,13 +251,13 @@
                         }
                     }
                 });
+                document.getElementById('unitChartContainer').classList.add('active');
             } else {
                 console.log('Gráfico de Unidade não renderizado: sem dados válidos');
                 ctxUnit.fillText('Sem dados para exibir', 10, 50);
+                document.getElementById('unitChartContainer').classList.add('active');
             }
         }
     </script>
-
-
 </body>
 </html>
