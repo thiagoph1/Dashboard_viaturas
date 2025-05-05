@@ -1,3 +1,5 @@
+console.log('script.js carregado com sucesso.');
+
 // Registrar o plugin datalabels globalmente
 Chart.register(ChartDataLabels);
 
@@ -21,16 +23,20 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function processFile() {
+    console.log('processFile chamado.');
     const fileInput = document.getElementById('fileInput');
     const file = fileInput.files[0];
     if (!file) {
-        document.getElementById('uploadError').textContent = 'Por favor, selecione um arquivo Excel.';
+        console.log('Nenhum arquivo selecionado.');
+        document.getElementById('uploadError').textContent = 'Por favor, selecione um arquivo Excel (.xlsx ou .xls).';
         return;
     }
 
+    console.log('Arquivo selecionado:', file.name);
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
+            console.log('Lendo arquivo Excel...');
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array', cellDates: true });
             const sheetName = workbook.SheetNames[0];
@@ -38,7 +44,8 @@ function processFile() {
             planilhaData = XLSX.utils.sheet_to_json(worksheet);
 
             if (!planilhaData || planilhaData.length === 0) {
-                document.getElementById('uploadError').textContent = 'Nenhum dado encontrado na planilha!';
+                console.log('Nenhum dado encontrado na planilha.');
+                document.getElementById('uploadError').textContent = 'Nenhum dado encontrado na planilha. Verifique o arquivo.';
                 return;
             }
 
@@ -46,7 +53,7 @@ function processFile() {
             showAnalysisScreen();
         } catch (error) {
             console.error('Erro ao processar a planilha:', error);
-            document.getElementById('uploadError').textContent = 'Erro ao processar a planilha. Verifique o formato do arquivo.';
+            document.getElementById('uploadError').textContent = 'Erro ao processar a planilha. Verifique se o arquivo é um Excel válido (.xlsx ou .xls).';
         }
     };
     reader.readAsArrayBuffer(file);
@@ -324,7 +331,7 @@ function processAvailabilityData() {
     });
 
     // Criar array para ordenação por total
-    const sortedUnits = Object.keys(availabilityData).map(unit => ({
+ spiritedUnits = Object.keys(availabilityData).map(unit => ({
         unit,
         total: availabilityData[unit].available + availabilityData[unit].unavailable,
         available: availabilityData[unit].available,
