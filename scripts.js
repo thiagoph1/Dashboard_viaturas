@@ -1,0 +1,572 @@
+// Registrar o plugin datalabels globalmente
+Chart.register(ChartDataLabels);
+
+let planilhaData = null; // Armazena os dados da planilha
+let unitChartInstance = null; // Instância do gráfico de Unidade
+let statusChartInstance = null; // Instância do gráfico de Status
+let availabilityChartInstance = null; // Instância do gráfico de Disponibilidade
+let currentSort = { column: 'total', direction: 'desc' }; // Estado de ordenação inicial
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOMContentLoaded: Verificando Chart.js e datalabels...');
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js não carregou. Verifique a conexão com a CDN.');
+        document.getElementById('uploadError').textContent = 'Erro: Chart.js não carregado. Verifique sua conexão com a internet.';
+    } else if (typeof ChartDataLabels === 'undefined') {
+        console.error('Chart.js datalabels não carregou. Verifique a conexão com a CDN.');
+        document.getElementById('uploadError').textContent = 'Erro: Plugin datalabels não carregado. Verifique sua conexão com a internet.';
+    } else {
+        console.log('Chart.js e datalabels carregados com sucesso.');
+    }
+});
+
+function processFile() {
+    const fileInput = document.getElementById('fileInput');
+    const file = fileInput.files[0];
+    if (!file) {
+        document.getElementById('uploadError').textContent = 'Por favor, selecione um arquivo Excel.';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            planilhaData = XLSX.utils.sheet_to_json(worksheet);
+
+            if (!planilhaData || planilhaData.length === 0) {
+                document.getElementById('uploadError').textContent = 'Nenhum dado encontrado na planilha!';
+                return;
+            }
+
+            console.log('Dados da planilha:', planilhaData);
+            showAnalysisScreen();
+        } catch (error) {
+            console.error('Erro ao processar a planilha:', error);
+            document.getElementById('uploadError').textContent = 'Erro ao processar a planilha. Verifique o formato do arquivo.';
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function showAnalysisScreen() {
+    // Calcular resumo
+    const totalRecords = planilhaData.length;
+
+    // Atualizar resumo
+    document.getElementById('totalRecords').textContent = totalRecords;
+
+    // Esconder tela de upload e mostrar tela de análise
+    document.getElementById('uploadScreen').classList.remove('active');
+    document.getElementById('analysisScreen').classList.add('active');
+    document.getElementById('uploadError').textContent = '';
+    document.getElementById('unitChartContainer').classList.remove('active');
+    document.getElementById('statusChartContainer').classList.remove('active');
+    document.getElementById('availabilityTableContainer').classList.remove('active');
+    if (unitChartInstance) {
+        unitChartInstance.destroy();
+        unitChartInstance = null;
+    }
+    if (statusChartInstance) {
+        statusChartInstance.destroy();
+        statusChartInstance = null;
+    }
+    if (availabilityChartInstance) {
+        availabilityChartInstance.destroy();
+        availabilityChartInstance = null;
+    }
+    // Resetar ordenação para padrão
+    currentSort = { column: 'total', direction: 'desc' };
+}
+
+function goBack() {
+    // Manter planilhaData e voltar para a tela de análise
+    if (planilhaData) {
+        showAnalysisScreen();
+    } else {
+        // Caso excepcional: sem dados, voltar para upload
+        document.getElementById('analysisScreen').classList.remove('active');
+        document.getElementById('uploadScreen').classList.add('active');
+        document.getElementById('fileInput').value = '';
+        document.getElementById('analysisError').textContent = '';
+    }
+}
+
+function showUnitCountChart() {
+    if (!planilhaData) {
+        document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload de uma planilha.';
+        return;
+    }
+
+    // Esconder outros elementos
+    document.getElementById('statusChartContainer').classList.remove('active');
+    document.getElementById('availabilityTableContainer').classList.remove('active');
+    if (statusChartInstance) {
+        statusChartInstance.destroy();
+        statusChartInstance = null;
+    }
+    if (availabilityChartInstance) {
+        availabilityChartInstance.destroy();
+        availabilityChartInstance = null;
+    }
+
+    // Processar Unidade para o gráfico
+    const unitCount = {};
+    let hasUnitColumn = false;
+
+    planilhaData.forEach(row => {
+        if (row.Unidade !== undefined && row.Unidade !== null) {
+            hasUnitColumn = true;
+            const unit = String(row.Unidade).trim();
+            if (unit) {
+                unitCount[unit] = (unitCount[unit] || 0) + 1;
+            }
+        }
+    });
+
+    console.log('Contagem de Unidades:', unitCount);
+    console.log('Coluna Unidade encontrada:', hasUnitColumn);
+
+    // Verificar Chart.js
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js não disponível para criar gráfico.');
+        document.getElementById('analysisError').textContent = 'Erro: Não foi possível criar o gráfico. Verifique a conexão com a CDN.';
+        return;
+    }
+
+    // Gráfico de Contagem por Unidade (sem datalabels)
+    const ctxUnit = document.getElementById('unitChart').getContext('2d');
+    if (unitChartInstance) {
+        unitChartInstance.destroy();
+    }
+
+    if (hasUnitColumn && Object.keys(unitCount).length > 0) {
+        unitChartInstance = new Chart(ctxUnit, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(unitCount),
+                datasets: [{
+                    label: 'Contagem por Unidade',
+                    data: Object.values(unitCount),
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Número de Registros' }
+                    },
+                    x: {
+                        title: { display: true, text: 'Unidade' }
+                    }
+                },
+                plugins: {
+                    datalabels: {
+                        display: false // Desativar datalabels para este gráfico
+                    }
+                }
+            }
+        });
+        document.getElementById('unitChartContainer').classList.add('active');
+    } else {
+        console.log('Gráfico de Unidade não renderizado: sem dados válidos');
+        ctxUnit.fillText('Sem dados para exibir', 10, 50);
+        document.getElementById('unitChartContainer').classList.add('active');
+    }
+}
+
+function showStatusCountChart() {
+    if (!planilhaData) {
+        document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload de uma planilha.';
+        return;
+    }
+
+    // Esconder outros elementos
+    document.getElementById('unitChartContainer').classList.remove('active');
+    document.getElementById('availabilityTableContainer').classList.remove('active');
+    if (unitChartInstance) {
+        unitChartInstance.destroy();
+        unitChartInstance = null;
+    }
+    if (availabilityChartInstance) {
+        availabilityChartInstance.destroy();
+        availabilityChartInstance = null;
+    }
+
+    // Processar Status Patrimônio para o gráfico
+    const statusCount = {};
+    let hasStatusColumn = false;
+    let totalValidStatus = 0;
+
+    planilhaData.forEach(row => {
+        if (row['Status Patrimonio'] !== undefined && row['Status Patrimonio'] !== null) {
+            hasStatusColumn = true;
+            const status = String(row['Status Patrimonio']).trim();
+            if (status) {
+                statusCount[status] = (statusCount[status] || 0) + 1;
+                totalValidStatus += 1;
+            }
+        }
+    });
+
+    console.log('Contagem de Status Patrimônio:', statusCount);
+    console.log('Coluna Status Patrimonio encontrada:', hasStatusColumn);
+    console.log('Total de registros com status válido:', totalValidStatus);
+
+    // Verificar Chart.js
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js não disponível para criar gráfico.');
+        document.getElementById('analysisError').textContent = 'Erro: Não foi possível criar o gráfico. Verifique a conexão com a CDN.';
+        return;
+    }
+
+    // Gráfico de Contagem por Status Patrimônio
+    const ctxStatus = document.getElementById('statusChart').getContext('2d');
+    if (statusChartInstance) {
+        statusChartInstance.destroy();
+    }
+
+    if (hasStatusColumn && Object.keys(statusCount).length > 0) {
+        statusChartInstance = new Chart(ctxStatus, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(statusCount),
+                datasets: [{
+                    label: 'Contagem por Status Patrimônio',
+                    data: Object.values(statusCount),
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Número de Registros' }
+                    },
+                    x: {
+                        title: { display: true, text: 'Status Patrimônio' }
+                    }
+                },
+                plugins: {
+                    datalabels: [
+                        // Quantidade dentro da barra
+                        {
+                            display: true,
+                            color: '#fff',
+                            anchor: 'center',
+                            align: 'center',
+                            font: {
+                                weight: 'bold',
+                                size: 14
+                            },
+                            formatter: (value) => value
+                        },
+                        // Porcentagem em cima
+                        {
+                            display: true,
+                            color: '#000',
+                            anchor: 'end',
+                            align: 'top',
+                            font: {
+                                weight: 'bold',
+                                size: 12
+                            },
+                            formatter: (value) => {
+                                if (totalValidStatus === 0) return '0%';
+                                const percentage = (value / totalValidStatus * 100).toFixed(0);
+                                return `${percentage}%`;
+                            }
+                        }
+                    ]
+                }
+            }
+        });
+        document.getElementById('statusChartContainer').classList.add('active');
+    } else {
+        console.log('Gráfico de Status Patrimônio não renderizado: sem dados válidos');
+        ctxStatus.fillText('Sem dados para exibir', 10, 50);
+        document.getElementById('statusChartContainer').classList.add('active');
+    }
+}
+
+function processAvailabilityData() {
+    console.log('Processando dados de disponibilidade...');
+    const availabilityData = {};
+    let hasUnitColumn = false;
+    let hasStatusColumn = false;
+
+    planilhaData.forEach(row => {
+        const unit = row.Unidade !== undefined && row.Unidade !== null ? String(row.Unidade).trim() : '';
+        const status = row['Status Patrimonio'] !== undefined && row['Status Patrimonio'] !== null ? String(row['Status Patrimonio']).trim() : '';
+
+        if (unit) {
+            hasUnitColumn = true;
+            if (!availabilityData[unit]) {
+                availabilityData[unit] = { available: 0, unavailable: 0 };
+            }
+            if (status) {
+                hasStatusColumn = true;
+                if (status === 'Em Uso') {
+                    availabilityData[unit].available += 1;
+                } else {
+                    availabilityData[unit].unavailable += 1;
+                }
+            }
+        }
+    });
+
+    // Criar array para ordenação por total
+    const sortedUnits = Object.keys(availabilityData).map(unit => ({
+        unit,
+        total: availabilityData[unit].available + availabilityData[unit].unavailable,
+        available: availabilityData[unit].available,
+        unavailable: availabilityData[unit].unavailable
+    })).sort((a, b) => b.total - a.total || a.unit.localeCompare(b.unit)); // Desempate por unit
+
+    // Log dos dados ordenados
+    console.log('Dados de Disponibilidade por OM ordenados por total:');
+    sortedUnits.forEach(item => {
+        console.log(`${item.unit}: Total=${item.total} (Disponível=${item.available}, Indisponível=${item.unavailable})`);
+    });
+
+    return { availabilityData, hasUnitColumn, hasStatusColumn, sortedUnits };
+}
+
+function renderTable(sortedData) {
+    console.log('Renderizando tabela com dados:', sortedData);
+    const tbody = document.getElementById('availabilityTableBody');
+    tbody.innerHTML = '';
+
+    if (sortedData.length === 0) {
+        console.log('Nenhum dado para renderizar na tabela.');
+        document.getElementById('analysisError').textContent = 'Sem dados válidos para exibir na tabela. Verifique as colunas "Unidade" e "Status Patrimonio".';
+        return;
+    }
+
+    sortedData.forEach(item => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${item.unit}</td>
+            <td>${item.available}</td>
+            <td>${item.unavailable}</td>
+        `;
+        tbody.appendChild(row);
+    });
+    document.getElementById('analysisError').textContent = '';
+}
+
+function sortTable(column) {
+    console.log(`Ordenando por ${column} (${currentSort.column === column && currentSort.direction === 'asc' ? 'descendente' : 'crescente'})`);
+
+    // Alternar direção se clicar na mesma coluna, caso contrário, usar crescente
+    const direction = (currentSort.column === column && currentSort.direction === 'asc') ? 'desc' : 'asc';
+    currentSort = { column, direction };
+
+    // Processar dados
+    const { hasUnitColumn, hasStatusColumn, sortedUnits } = processAvailabilityData();
+
+    if (!hasUnitColumn || !hasStatusColumn) {
+        console.log('Erro: Colunas Unidade ou Status Patrimonio ausentes.');
+        document.getElementById('analysisError').textContent = 'Erro: Colunas "Unidade" ou "Status Patrimonio" não encontradas.';
+        return;
+    }
+
+    // Ordenar dados
+    let sortedData = [...sortedUnits];
+    if (column === 'unit') {
+        sortedData.sort((a, b) => {
+            const comparison = a.unit.localeCompare(b.unit);
+            return direction === 'asc' ? comparison : -comparison;
+        });
+    } else if (column === 'available' || column === 'unavailable') {
+        sortedData.sort((a, b) => {
+            const valueA = a[column];
+            const valueB = b[column];
+            let comparison = valueA - valueB;
+            if (comparison === 0) {
+                comparison = a.unit.localeCompare(b.unit); // Desempate por OM
+            }
+            return direction === 'asc' ? comparison : -comparison;
+        });
+    } else {
+        // Caso padrão (total)
+        sortedData.sort((a, b) => {
+            let comparison = b.total - a.total;
+            if (comparison === 0) {
+                comparison = a.unit.localeCompare(b.unit);
+            }
+            return comparison;
+        });
+    }
+
+    // Renderizar tabela
+    renderTable(sortedData);
+
+    // Atualizar indicadores de ordenação
+    document.getElementById('sortIndicatorUnit').textContent = (column === 'unit' ? (direction === 'asc' ? '↑' : '↓') : '');
+    document.getElementById('sortIndicatorAvailable').textContent = (column === 'available' ? (direction === 'asc' ? '↑' : '↓') : '');
+    document.getElementById('sortIndicatorUnavailable').textContent = (column === 'unavailable' ? (direction === 'asc' ? '↑' : '↓') : '');
+}
+
+function showAvailabilityTable() {
+    if (!planilhaData) {
+        console.log('Erro: Nenhum dado carregado.');
+        document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload de uma planilha.';
+        return;
+    }
+
+    console.log('Mostrando tabela de Disponibilidade por OM...');
+
+    // Esconder gráficos
+    document.getElementById('unitChartContainer').classList.remove('active');
+    document.getElementById('statusChartContainer').classList.remove('active');
+    if (unitChartInstance) {
+        unitChartInstance.destroy();
+        unitChartInstance = null;
+    }
+    if (statusChartInstance) {
+        statusChartInstance.destroy();
+        statusChartInstance = null;
+    }
+    if (availabilityChartInstance) {
+        availabilityChartInstance.destroy();
+        availabilityChartInstance = null;
+    }
+
+    // Mostrar tabela e botão "Gerar Gráfico"
+    document.getElementById('availabilityTable').classList.add('active');
+    document.getElementById('availabilityChart').classList.remove('active');
+    document.getElementById('availabilityTableContainer').classList.add('active');
+    document.getElementById('generateChartButton').style.display = 'inline-block';
+    document.getElementById('backToTableButton').style.display = 'none';
+
+    // Processar dados
+    const { hasUnitColumn, hasStatusColumn, sortedUnits } = processAvailabilityData();
+
+    // Renderizar tabela com ordenação atual
+    let sortedData = [...sortedUnits];
+    if (currentSort.column === 'unit') {
+        sortedData.sort((a, b) => {
+            const comparison = a.unit.localeCompare(b.unit);
+            return currentSort.direction === 'asc' ? comparison : -comparison;
+        });
+    } else if (currentSort.column === 'available' || currentSort.column === 'unavailable') {
+        sortedData.sort((a, b) => {
+            const valueA = a[currentSort.column];
+            const valueB = b[currentSort.column];
+            let comparison = valueA - valueB;
+            if (comparison === 0) {
+                comparison = a.unit.localeCompare(b.unit);
+            }
+            return currentSort.direction === 'asc' ? comparison : -comparison;
+        });
+    } else {
+        // Padrão: total, decrescente
+        sortedData.sort((a, b) => {
+            let comparison = b.total - a.total;
+            if (comparison === 0) {
+                comparison = a.unit.localeCompare(b.unit);
+            }
+            return comparison;
+        });
+    }
+
+    renderTable(sortedData);
+
+    // Atualizar indicadores de ordenação
+    document.getElementById('sortIndicatorUnit').textContent = (currentSort.column === 'unit' ? (currentSort.direction === 'asc' ? '↑' : '↓') : '');
+    document.getElementById('sortIndicatorAvailable').textContent = (currentSort.column === 'available' ? (currentSort.direction === 'asc' ? '↑' : '↓') : '');
+    document.getElementById('sortIndicatorUnavailable').textContent = (currentSort.column === 'unavailable' ? (currentSort.direction === 'asc' ? '↑' : '↓') : '');
+}
+
+function showAvailabilityChart() {
+    if (!planilhaData) {
+        console.log('Erro: Nenhum dado carregado.');
+        document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload de uma planilha.';
+        return;
+    }
+
+    console.log('Mostrando gráfico de Disponibilidade por OM...');
+
+    // Esconder tabela e mostrar gráfico
+    document.getElementById('availabilityTable').classList.remove('active');
+    document.getElementById('availabilityChart').classList.add('active');
+    document.getElementById('availabilityTableContainer').classList.add('active');
+    document.getElementById('generateChartButton').style.display = 'none';
+    document.getElementById('backToTableButton').style.display = 'inline-block';
+
+    // Processar dados
+    const { hasUnitColumn, hasStatusColumn, sortedUnits } = processAvailabilityData();
+
+    // Verificar Chart.js
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js não disponível para criar gráfico.');
+        document.getElementById('analysisError').textContent = 'Erro: Não foi possível criar o gráfico. Verifique a conexão com a CDN.';
+        return;
+    }
+
+    // Gráfico de Disponibilidade por OM
+    const ctxAvailability = document.getElementById('availabilityChart').getContext('2d');
+    if (availabilityChartInstance) {
+        availabilityChartInstance.destroy();
+    }
+
+    if (hasUnitColumn && hasStatusColumn && sortedUnits.length > 0) {
+        const units = sortedUnits.map(item => item.unit);
+        availabilityChartInstance = new Chart(ctxAvailability, {
+            type: 'bar',
+            data: {
+                labels: units,
+                datasets: [
+                    {
+                        label: 'Disponível',
+                        data: sortedUnits.map(item => item.available),
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1,
+                        stack: 'Stack 0'
+                    },
+                    {
+                        label: 'Indisponível',
+                        data: sortedUnits.map(item => item.unavailable),
+                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1,
+                        stack: 'Stack 0'
+                    }
+                ]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        stacked: true,
+                        title: { display: true, text: 'Número de Registros' }
+                    },
+                    x: {
+                        stacked: true,
+                        title: { display: true, text: 'OM' }
+                    }
+                },
+                plugins: {
+                    datalabels: {
+                        display: false // Desativar datalabels para evitar poluição visual
+                    }
+                }
+            }
+        });
+        document.getElementById('analysisError').textContent = '';
+    } else {
+        console.log('Gráfico de Disponibilidade não renderizado: sem dados válidos');
+        ctxAvailability.fillText('Sem dados para exibir', 10, 50);
+        document.getElementById('analysisError').textContent = 'Sem dados válidos para exibir no gráfico. Verifique as colunas "Unidade" e "Status Patrimonio".';
+    }
+}

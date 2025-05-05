@@ -1,0 +1,119 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f4f4f4;
+}
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+h1 {
+    text-align: center;
+    color: #333;
+}
+.screen {
+    display: none;
+}
+.screen.active {
+    display: block;
+}
+.upload-section {
+    margin-bottom: 20px;
+    text-align: center;
+}
+#fileInput {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-right: 10px;
+}
+button {
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 10px;
+}
+button:hover {
+    background-color: #45a049;
+}
+.summary {
+    margin-bottom: 20px;
+    text-align: center;
+}
+.summary p {
+    font-size: 1.2em;
+    color: #555;
+}
+.button-section {
+    text-align: center;
+    margin-bottom: 20px;
+}
+.button-section button {
+    margin: 0 10px;
+}
+.chart-container {
+    margin-top: 20px;
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+    display: none;
+}
+.table-container {
+    margin-top: 20px;
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+    display: none;
+    text-align: center;
+}
+.chart-container.active, .table-container.active {
+    display: block;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+th, td {
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #ccc;
+}
+th {
+    background-color: #f0f0f0;
+    font-weight: bold;
+    cursor: pointer;
+}
+th:hover {
+    background-color: #e0e0e0;
+}
+th .sort-indicator {
+    margin-left: 5px;
+    font-size: 0.8em;
+}
+.error-message {
+    color: red;
+    text-align: center;
+    margin-top: 20px;
+}
+#availabilityTable, #availabilityChart {
+    display: none;
+}
+#availabilityTable.active, #availabilityChart.active {
+    display: block;
+}
+@media (max-width: 1024px) {
+    .chart-container, .table-container {
+        max-width: 90%;
+    }
+}
