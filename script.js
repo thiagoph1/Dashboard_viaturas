@@ -50,6 +50,8 @@ function processFile() {
             }
 
             console.log('Dados da planilha:', planilhaData);
+            // Logar nomes das colunas
+            console.log('Colunas encontradas:', Object.keys(planilhaData[0]));
             showAnalysisScreen();
         } catch (error) {
             console.error('Erro ao processar a planilha:', error);
@@ -125,9 +127,11 @@ function showUnitCountChart() {
     let hasUnitColumn = false;
 
     planilhaData.forEach(row => {
-        if (row.Unidade !== undefined && row.Unidade !== null) {
+        // Procurar coluna "Unidade" (insensível a maiúsculas/minúsculas)
+        const unitKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'unidade');
+        if (unitKey && row[unitKey] !== undefined && row[unitKey] !== null) {
             hasUnitColumn = true;
-            const unit = String(row.Unidade).trim();
+            const unit = String(row[unitKey]).trim();
             if (unit) {
                 unitCount[unit] = (unitCount[unit] || 0) + 1;
             }
@@ -212,9 +216,11 @@ function showStatusCountChart() {
     let totalValidStatus = 0;
 
     planilhaData.forEach(row => {
-        if (row['Status Patrimonio'] !== undefined && row['Status Patrimonio'] !== null) {
+        // Procurar coluna "Status Patrimonio" (insensível a maiúsculas/minúsculas)
+        const statusKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'statuspatrimonio');
+        if (statusKey && row[statusKey] !== undefined && row[statusKey] !== null) {
             hasStatusColumn = true;
-            const status = String(row['Status Patrimonio']).trim();
+            const status = String(row[statusKey]).trim();
             if (status) {
                 statusCount[status] = (statusCount[status] || 0) + 1;
                 totalValidStatus += 1;
@@ -309,42 +315,72 @@ function processAvailabilityData() {
     const availabilityData = {};
     let hasUnitColumn = false;
     let hasStatusColumn = false;
+    let statusValues = new Set();
+    let errorMessage = '';
 
-    planilhaData.forEach(row => {
-        const unit = row.Unidade !== undefined && row.Unidade !== null ? String(row.Unidade).trim() : '';
-        const status = row['Status Patrimonio'] !== undefined && row['Status Patrimonio'] !== null ? String(row['Status Patrimonio']).trim() : '';
+    try {
+        planilhaData.forEach(row => {
+            // Procurar coluna "Unidade" (insensível a maiúsculas/minúsculas)
+            const unitKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'unidade');
+            // Procurar coluna "Status Patrimonio" (insensível a maiúsculas/minúsculas)
+            const statusKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'statuspatrimonio');
 
-        if (unit) {
-            hasUnitColumn = true;
-            if (!availabilityData[unit]) {
-                availabilityData[unit] = { available: 0, unavailable: 0 };
-            }
-            if (status) {
-                hasStatusColumn = true;
-                if (status === 'Em Uso') {
-                    availabilityData[unit].available += 1;
-                } else {
-                    availabilityData[unit].unavailable += 1;
+            const unit = unitKey && row[unitKey] !== undefined && row[unitKey] !== null ? String(row[unitKey]).trim() : '';
+            const status = statusKey && row[statusKey] !== undefined && row[statusKey] !== null ? String(row[statusKey]).trim() : '';
+
+            if (unit) {
+                hasUnitColumn = true;
+                if (!availabilityData[unit]) {
+                    availabilityData[unit] = { available: 0, unavailable: 0 };
+                }
+                if (status) {
+                    hasStatusColumn = true;
+                    statusValues.add(status);
+                    // Considerar "Em Uso" (insensível a maiúsculas/minúsculas) como Disponível
+                    if (status.toLowerCase() === 'em uso') {
+                        availabilityData[unit].available += 1;
+                    } else {
+                        availabilityData[unit].unavailable += 1;
+                    }
                 }
             }
+        });
+
+        console.log('Valores de Status Patrimonio encontrados:', [...statusValues]);
+
+        // Verificar colunas
+        if (!hasUnitColumn) {
+            errorMessage += 'Coluna "Unidade" não encontrada. ';
         }
-    });
+        if (!hasStatusColumn) {
+            errorMessage += 'Coluna "Status Patrimonio" não encontrada.';
+        }
+        if (!hasUnitColumn || !hasStatusColumn) {
+            console.log('Erro: Colunas ausentes:', errorMessage);
+            return { availabilityData, hasUnitColumn, hasStatusColumn, sortedUnits: [], errorMessage };
+        }
 
-    // Criar array para ordenação por total
- spiritedUnits = Object.keys(availabilityData).map(unit => ({
-        unit,
-        total: availabilityData[unit].available + availabilityData[unit].unavailable,
-        available: availabilityData[unit].available,
-        unavailable: availabilityData[unit].unavailable
-    })).sort((a, b) => b.total - a.total || a.unit.localeCompare(b.unit)); // Desempate por unit
+        // Criar array para ordenação por total
+        console.log('Criando sortedUnits...');
+        const sortedUnits = Object.keys(availabilityData).map(unit => ({
+            unit,
+            total: availabilityData[unit].available + availabilityData[unit].unavailable,
+            available: availabilityData[unit].available,
+            unavailable: availabilityData[unit].unavailable
+        })).sort((a, b) => b.total - a.total || a.unit.localeCompare(b.unit)); // Desempate por unit
 
-    // Log dos dados ordenados
-    console.log('Dados de Disponibilidade por OM ordenados por total:');
-    sortedUnits.forEach(item => {
-        console.log(`${item.unit}: Total=${item.total} (Disponível=${item.available}, Indisponível=${item.unavailable})`);
-    });
+        // Log dos dados ordenados
+        console.log('Dados de Disponibilidade por OM ordenados por total:');
+        sortedUnits.forEach(item => {
+            console.log(`${item.unit}: Total=${item.total} (Disponível=${item.available}, Indisponível=${item.unavailable})`);
+        });
 
-    return { availabilityData, hasUnitColumn, hasStatusColumn, sortedUnits };
+        return { availabilityData, hasUnitColumn, hasStatusColumn, sortedUnits, errorMessage };
+    } catch (error) {
+        console.error('Erro em processAvailabilityData:', error);
+        errorMessage = 'Erro ao processar dados de disponibilidade. Verifique a planilha.';
+        return { availabilityData, hasUnitColumn, hasStatusColumn, sortedUnits: [], errorMessage };
+    }
 }
 
 function renderTable(sortedData) {
@@ -352,7 +388,7 @@ function renderTable(sortedData) {
     const tbody = document.getElementById('availabilityTableBody');
     tbody.innerHTML = '';
 
-    if (sortedData.length === 0) {
+    if (!sortedData || sortedData.length === 0) {
         console.log('Nenhum dado para renderizar na tabela.');
         document.getElementById('analysisError').textContent = 'Sem dados válidos para exibir na tabela. Verifique as colunas "Unidade" e "Status Patrimonio".';
         return;
@@ -378,11 +414,11 @@ function sortTable(column) {
     currentSort = { column, direction };
 
     // Processar dados
-    const { hasUnitColumn, hasStatusColumn, sortedUnits } = processAvailabilityData();
+    const { hasUnitColumn, hasStatusColumn, sortedUnits, errorMessage } = processAvailabilityData();
 
     if (!hasUnitColumn || !hasStatusColumn) {
         console.log('Erro: Colunas Unidade ou Status Patrimonio ausentes.');
-        document.getElementById('analysisError').textContent = 'Erro: Colunas "Unidade" ou "Status Patrimonio" não encontradas.';
+        document.getElementById('analysisError').textContent = errorMessage || 'Erro: Colunas "Unidade" ou "Status Patrimonio" não encontradas.';
         return;
     }
 
@@ -456,7 +492,13 @@ function showAvailabilityTable() {
     document.getElementById('backToTableButton').style.display = 'none';
 
     // Processar dados
-    const { hasUnitColumn, hasStatusColumn, sortedUnits } = processAvailabilityData();
+    const { hasUnitColumn, hasStatusColumn, sortedUnits, errorMessage } = processAvailabilityData();
+
+    if (!hasUnitColumn || !hasStatusColumn) {
+        console.log('Erro: Colunas ausentes:', errorMessage);
+        document.getElementById('analysisError').textContent = errorMessage || 'Erro: Colunas "Unidade" ou "Status Patrimonio" não encontradas.';
+        return;
+    }
 
     // Renderizar tabela com ordenação atual
     let sortedData = [...sortedUnits];
@@ -511,7 +553,13 @@ function showAvailabilityChart() {
     document.getElementById('backToTableButton').style.display = 'inline-block';
 
     // Processar dados
-    const { hasUnitColumn, hasStatusColumn, sortedUnits } = processAvailabilityData();
+    const { hasUnitColumn, hasStatusColumn, sortedUnits, errorMessage } = processAvailabilityData();
+
+    if (!hasUnitColumn || !hasStatusColumn) {
+        console.log('Erro: Colunas ausentes:', errorMessage);
+        document.getElementById('analysisError').textContent = errorMessage || 'Erro: Colunas "Unidade" ou "Status Patrimonio" não encontradas.';
+        return;
+    }
 
     // Verificar Chart.js
     if (typeof Chart === 'undefined') {
