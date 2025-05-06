@@ -10,6 +10,14 @@ let availabilityChartInstance = null;
 let currentSort = { column: 'total', direction: 'desc' };
 let availableUnits = []; // Armazena unidades únicas para filtro
 
+// Lista fixa de Elos do SISTRAN
+const SISTRAN_UNITS = [
+    'AFA', 'BAAN', 'BABV', 'BACG', 'BAFL', 'BAFZ', 'BANT', 'BAPV', 'BASC', 'BASM', 'BASV',
+    'CISCEA', 'CLA', 'COMARA', 'CPBV-CC', 'CRCEA-SE', 'DACTA I', 'DACTA II', 'DACTA III',
+    'DACTA IV', 'DECEA', 'EEAR', 'EPCAR', 'GABAER', 'GAP-AF', 'GAP-BE', 'GAP-BR', 'GAP-CO',
+    'GAP-DF', 'GAP-GL', 'GAP-LS', 'GAP-MN', 'GAP-RF', 'GAP-RJ', 'GAP-SJ', 'GAP-SP', 'ICEA', 'PAME'
+];
+
 // Expor funções globais para eventos no HTML
 window.processFile = processFile;
 window.applyUnitFilter = applyUnitFilter;
@@ -90,26 +98,54 @@ function showFilterScreen() {
         }
     });
 
-    availableUnits = [...unitSet].sort(); // Ordenar alfabeticamente
+    availableUnits = [...unitSet];
     console.log('Unidades disponíveis:', availableUnits);
 
-    // Renderizar lista de unidades
-    const unitFilterList = document.getElementById('unitFilterList');
-    unitFilterList.innerHTML = '';
+    // Separar unidades em Elos do SISTRAN e Outros
+    const sistranUnits = availableUnits.filter(unit => SISTRAN_UNITS.includes(unit)).sort();
+    const otherUnits = availableUnits.filter(unit => !SISTRAN_UNITS.includes(unit)).sort();
+    console.log('Elos do SISTRAN:', sistranUnits);
+    console.log('Outros:', otherUnits);
 
-    if (hasUnitColumn && availableUnits.length > 0) {
-        availableUnits.forEach(unit => {
+    // Renderizar lista de Elos do SISTRAN
+    const sistranList = document.getElementById('sistranUnitsList');
+    sistranList.innerHTML = '';
+    if (hasUnitColumn && sistranUnits.length > 0) {
+        sistranUnits.forEach(unit => {
             const label = document.createElement('label');
             label.innerHTML = `
                 <input type="checkbox" value="${unit}" class="unit-checkbox">
                 ${unit}
             `;
-            unitFilterList.appendChild(label);
+            sistranList.appendChild(label);
         });
-        document.getElementById('filterError').textContent = '';
     } else {
-        unitFilterList.innerHTML = '<p>Nenhuma unidade encontrada na planilha.</p>';
+        sistranList.innerHTML = '<p>Nenhuma unidade do SISTRAN encontrada.</p>';
+    }
+
+    // Renderizar lista de Outros
+    const otherList = document.getElementById('otherUnitsList');
+    otherList.innerHTML = '';
+    if (hasUnitColumn && otherUnits.length > 0) {
+        otherUnits.forEach(unit => {
+            const label = document.createElement('label');
+            label.innerHTML = `
+                <input type="checkbox" value="${unit}" class="unit-checkbox">
+                ${unit}
+            `;
+            otherList.appendChild(label);
+        });
+    } else {
+        otherList.innerHTML = '<p>Nenhuma outra unidade encontrada.</p>';
+    }
+
+    // Exibir mensagem de erro se necessário
+    if (!hasUnitColumn) {
         document.getElementById('filterError').textContent = 'Coluna "Unidade" não encontrada ou sem dados válidos. Clique em "Prosseguir sem Remover" para continuar.';
+    } else if (availableUnits.length === 0) {
+        document.getElementById('filterError').textContent = 'Nenhuma unidade válida encontrada na planilha. Clique em "Prosseguir sem Remover" para continuar.';
+    } else {
+        document.getElementById('filterError').textContent = '';
     }
 
     // Esconder outras telas e mostrar tela de filtro
@@ -174,7 +210,7 @@ function showAnalysisScreen() {
 
 function goBack() {
     if (planilhaData) {
-        showFilterScreen(); // Voltar para a tela de filtro em vez de upload
+        showFilterScreen();
     } else {
         document.getElementById('analysisScreen').classList.remove('active');
         document.getElementById('filterScreen').classList.remove('active');

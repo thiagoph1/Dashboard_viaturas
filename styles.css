@@ -15,6 +15,11 @@ h1, h2 {
     text-align: center;
     color: #333;
 }
+h3 {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 1.2em;
+}
 .screen {
     display: none;
 }
@@ -112,9 +117,18 @@ th .sort-indicator {
 #availabilityTable.active, #availabilityChart.active {
     display: block;
 }
-.unit-filter-list {
-    max-width: 600px;
+.unit-filter-columns {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    max-width: 1000px;
     margin: 20px auto;
+}
+.unit-filter-column {
+    flex: 1;
+    min-width: 300px;
+}
+.unit-filter-list {
     text-align: left;
 }
 .unit-filter-list label {
@@ -125,8 +139,15 @@ th .sort-indicator {
 .unit-filter-list input[type="checkbox"] {
     margin-right: 10px;
 }
-@media (max-width: 1024px) {
-    .chart-container, .table-container, .unit-filter-list {
+@media (max-width: 768px) {
+    .unit-filter-columns {
+        flex-direction: column;
+        gap: 20px;
+    }
+    .unit-filter-column {
+        min-width: 100%;
+    }
+    .chart-container, .table-container, .unit-filter-columns {
         max-width: 90%;
     }
 }
