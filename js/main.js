@@ -8,9 +8,12 @@ let unitChartInstance = null;
 let statusChartInstance = null;
 let availabilityChartInstance = null;
 let currentSort = { column: 'total', direction: 'desc' };
+let availableUnits = []; // Armazena unidades únicas para filtro
 
 // Expor funções globais para eventos no HTML
 window.processFile = processFile;
+window.applyUnitFilter = applyUnitFilter;
+window.skipUnitFilter = skipUnitFilter;
 window.goBack = goBack;
 window.showUnitCountChart = showUnitCountChart;
 window.showStatusCountChart = showStatusCountChart;
@@ -61,7 +64,7 @@ function processFile() {
             }
 
             console.log('Colunas encontradas:', Object.keys(planilhaData[0]));
-            showAnalysisScreen();
+            showFilterScreen();
         } catch (error) {
             console.error('Erro ao processar a planilha:', error);
             document.getElementById('uploadError').textContent = 'Erro ao processar a planilha. Verifique se o arquivo é um Excel válido (.xlsx ou .xls).';
@@ -70,11 +73,84 @@ function processFile() {
     reader.readAsArrayBuffer(file);
 }
 
+function showFilterScreen() {
+    // Extrair unidades únicas
+    availableUnits = [];
+    const unitSet = new Set();
+    let hasUnitColumn = false;
+
+    planilhaData.forEach(row => {
+        const unitKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'unidade');
+        if (unitKey && row[unitKey] !== undefined && row[unitKey] !== null) {
+            hasUnitColumn = true;
+            const unit = String(row[unitKey]).trim();
+            if (unit) {
+                unitSet.add(unit);
+            }
+        }
+    });
+
+    availableUnits = [...unitSet].sort(); // Ordenar alfabeticamente
+    console.log('Unidades disponíveis:', availableUnits);
+
+    // Renderizar lista de unidades
+    const unitFilterList = document.getElementById('unitFilterList');
+    unitFilterList.innerHTML = '';
+
+    if (hasUnitColumn && availableUnits.length > 0) {
+        availableUnits.forEach(unit => {
+            const label = document.createElement('label');
+            label.innerHTML = `
+                <input type="checkbox" value="${unit}" class="unit-checkbox">
+                ${unit}
+            `;
+            unitFilterList.appendChild(label);
+        });
+        document.getElementById('filterError').textContent = '';
+    } else {
+        unitFilterList.innerHTML = '<p>Nenhuma unidade encontrada na planilha.</p>';
+        document.getElementById('filterError').textContent = 'Coluna "Unidade" não encontrada ou sem dados válidos. Clique em "Prosseguir sem Remover" para continuar.';
+    }
+
+    // Esconder outras telas e mostrar tela de filtro
+    document.getElementById('uploadScreen').classList.remove('active');
+    document.getElementById('analysisScreen').classList.remove('active');
+    document.getElementById('filterScreen').classList.add('active');
+}
+
+function applyUnitFilter() {
+    console.log('Aplicando filtro de unidades...');
+    const checkboxes = document.querySelectorAll('.unit-checkbox:checked');
+    const unitsToRemove = Array.from(checkboxes).map(cb => cb.value);
+    console.log('Unidades a remover:', unitsToRemove);
+
+    if (unitsToRemove.length === availableUnits.length && availableUnits.length > 0) {
+        document.getElementById('filterError').textContent = 'Não é possível remover todas as unidades. Selecione pelo menos uma unidade para manter.';
+        return;
+    }
+
+    // Filtrar planilhaData
+    planilhaData = planilhaData.filter(row => {
+        const unitKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'unidade');
+        const unit = unitKey && row[unitKey] !== undefined && row[unitKey] !== null ? String(row[unitKey]).trim() : '';
+        return !unitsToRemove.includes(unit);
+    });
+
+    console.log('Dados após filtro:', planilhaData.length, 'registros');
+    showAnalysisScreen();
+}
+
+function skipUnitFilter() {
+    console.log('Prosseguindo sem remover unidades.');
+    showAnalysisScreen();
+}
+
 function showAnalysisScreen() {
     const totalRecords = planilhaData.length;
     document.getElementById('totalRecords').textContent = totalRecords;
 
     document.getElementById('uploadScreen').classList.remove('active');
+    document.getElementById('filterScreen').classList.remove('active');
     document.getElementById('analysisScreen').classList.add('active');
     document.getElementById('uploadError').textContent = '';
     document.getElementById('unitChartContainer').classList.remove('active');
@@ -98,9 +174,10 @@ function showAnalysisScreen() {
 
 function goBack() {
     if (planilhaData) {
-        showAnalysisScreen();
+        showFilterScreen(); // Voltar para a tela de filtro em vez de upload
     } else {
         document.getElementById('analysisScreen').classList.remove('active');
+        document.getElementById('filterScreen').classList.remove('active');
         document.getElementById('uploadScreen').classList.add('active');
         document.getElementById('fileInput').value = '';
         document.getElementById('analysisError').textContent = '';

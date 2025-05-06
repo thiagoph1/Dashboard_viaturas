@@ -11,7 +11,7 @@ body {
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
-h1 {
+h1, h2 {
     text-align: center;
     color: #333;
 }
@@ -112,8 +112,21 @@ th .sort-indicator {
 #availabilityTable.active, #availabilityChart.active {
     display: block;
 }
+.unit-filter-list {
+    max-width: 600px;
+    margin: 20px auto;
+    text-align: left;
+}
+.unit-filter-list label {
+    display: block;
+    margin: 10px 0;
+    font-size: 1.1em;
+}
+.unit-filter-list input[type="checkbox"] {
+    margin-right: 10px;
+}
 @media (max-width: 1024px) {
-    .chart-container, .table-container {
+    .chart-container, .table-container, .unit-filter-list {
         max-width: 90%;
     }
 }

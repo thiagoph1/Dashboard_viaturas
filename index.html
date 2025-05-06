@@ -19,6 +19,18 @@
             <div id="uploadError" class="error-message"></div>
         </div>
 
+        <!-- Nova Tela: Filtro de Unidades -->
+        <div id="filterScreen" class="screen">
+            <h2>Filtrar Unidades</h2>
+            <p>Selecione as unidades que deseja remover dos dados:</p>
+            <div id="unitFilterList" class="unit-filter-list"></div>
+            <div class="button-section">
+                <button onclick="applyUnitFilter()">Confirmar Remoção</button>
+                <button onclick="skipUnitFilter()">Prosseguir sem Remover</button>
+            </div>
+            <div id="filterError" class="error-message"></div>
+        </div>
+
         <!-- Segunda Tela: Seleção de Funções -->
         <div id="analysisScreen" class="screen">
             <div class="summary">
@@ -61,7 +73,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-    <!-- Script local -->
+    <!-- Script principal como módulo -->
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
