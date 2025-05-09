@@ -49,6 +49,7 @@
                 <button onclick="showUnitCountChart()">Análise das Quantidades por Unidade</button>
                 <button onclick="showStatusCountChart()">Análise dos Status</button>
                 <button onclick="showAvailabilityTable()">Disponibilidade por OM</button>
+                <button onclick="showHistoryScreen()">Ver Histórico</button>
             </div>
             <div class="chart-container" id="unitChartContainer">
                 <canvas id="unitChart"></canvas>
@@ -76,13 +77,31 @@
             <button onclick="goBack()">Voltar</button>
             <div id="analysisError" class="error-message"></div>
         </div>
+
+        <!-- Tela de Histórico -->
+        <div id="historyScreen" class="screen">
+            <h2>Histórico de Planilhas</h2>
+            <p>Selecione uma data para visualizar os dados ou veja a evolução ao longo do tempo:</p>
+            <div class="history-controls">
+                <select id="historyDateSelect" onchange="showHistoricalData()">
+                    <option value="">Selecione uma data</option>
+                </select>
+                <button onclick="exportHistory()">Exportar Histórico</button>
+                <input type="file" id="importHistoryInput" accept=".json" onchange="importHistory()">
+                <button onclick="triggerImportHistory()">Importar Histórico</button>
+            </div>
+            <div class="chart-container" id="historyChartContainer">
+                <canvas id="historyChart"></canvas>
+            </div>
+            <button onclick="goBackFromHistory()">Voltar</button>
+            <div id="historyError" class="error-message"></div>
+        </div>
     </div>
 
     <!-- CDNs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-    <!-- Script principal como módulo -->
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
