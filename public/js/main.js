@@ -4,7 +4,7 @@ import { renderAvailabilityTable, sortAvailabilityTable } from './tableRenderer.
 
 // Estado global
 let planilhaData = null;
-let historicalData = null; // Para dados carregados do MongoDB
+let historicalData = null;
 let unitChartInstance = null;
 let statusChartInstance = null;
 let availabilityChartInstance = null;
@@ -59,27 +59,39 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadAvailableDates() {
     console.log('Carregando datas disponíveis...');
+    const dateSelect = document.getElementById('dateSelect');
+    if (!dateSelect) {
+        console.error('Elemento #dateSelect não encontrado');
+        document.getElementById('initialError').textContent = 'Erro: Elemento de seleção de datas não encontrado.';
+        return;
+    }
+
     try {
+        console.log('Fazendo requisição para /.netlify/functions/get-dates');
         const response = await fetch('/.netlify/functions/get-dates');
+        console.log('Resposta recebida:', response.status, response.statusText);
         if (!response.ok) {
-            throw new Error('Erro ao buscar datas: ' + response.statusText);
+            throw new Error(`Erro ao buscar datas: ${response.statusText}`);
         }
         const dates = await response.json();
         console.log('Datas recebidas:', dates);
 
-        const dateSelect = document.getElementById('dateSelect');
         dateSelect.innerHTML = '<option value="">Selecione uma data</option>';
-        dates.forEach(date => {
-            const option = document.createElement('option');
-            option.value = date;
-            option.textContent = date;
-            dateSelect.appendChild(option);
-        });
-
-        document.getElementById('initialError').textContent = '';
+        if (dates.length === 0) {
+            console.warn('Nenhuma data disponível');
+            document.getElementById('initialError').textContent = 'Nenhuma data encontrada no banco de dados.';
+        } else {
+            dates.forEach(date => {
+                const option = document.createElement('option');
+                option.value = date;
+                option.textContent = date;
+                dateSelect.appendChild(option);
+            });
+            document.getElementById('initialError').textContent = '';
+        }
     } catch (error) {
         console.error('Erro em loadAvailableDates:', error);
-        document.getElementById('initialError').textContent = 'Erro ao carregar datas disponíveis.';
+        document.getElementById('initialError').textContent = `Erro ao carregar datas: ${error.message}`;
     }
 }
 
@@ -108,7 +120,6 @@ async function loadDataByDate() {
             throw new Error('Dados inválidos recebidos');
         }
 
-        // Converter dados históricos para formato compatível com planilhaData
         historicalData = data;
         planilhaData = convertToPlanilhaData(data);
         console.log('planilhaData convertido:', planilhaData);
@@ -124,7 +135,6 @@ function convertToPlanilhaData(data) {
     console.log('Convertendo dados históricos para planilhaData...');
     const result = [];
     data.availability.forEach(item => {
-        // Criar registros simulando a planilha original
         for (let i = 0; i < item.available; i++) {
             result.push({
                 Unidade: item.unit,
@@ -576,7 +586,7 @@ function showHistoricalData() {
     const selectedDate = dateSelect.value;
     if (selectedDate) {
         console.log('Exibir dados de:', selectedDate);
-        loadDataByDate(); // Reutilizar função para carregar dados
+        loadDataByDate();
     }
 }
 
