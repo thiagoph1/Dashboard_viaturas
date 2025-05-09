@@ -1,5 +1,5 @@
 import { processUnitData, processStatusData, processAvailabilityData } from './dataProcessor.js';
-import { renderUnitChart, renderStatusChart, renderAvailabilityChart } from './chartRenderer.js';
+import { renderUnitChart, renderStatusChart, renderAvailabilityChart, renderHistoryChart } from './chartRenderer.js';
 import { renderAvailabilityTable, sortAvailabilityTable } from './tableRenderer.js';
 
 // Estado global
@@ -7,10 +7,9 @@ let planilhaData = null;
 let unitChartInstance = null;
 let statusChartInstance = null;
 let availabilityChartInstance = null;
+let historyChartInstance = null;
 let currentSort = { column: 'total', direction: 'desc' };
-let availableUnits = []; // Armazena unidades únicas para filtro
-
-// Lista fixa de Elos do SISTRAN
+let availableUnits = [];
 const SISTRAN_UNITS = [
     'AFA', 'BAAN', 'BABV', 'BACG', 'BAFL', 'BAFZ', 'BANT', 'BAPV', 'BASC', 'BASM', 'BASV',
     'CISCEA', 'CLA', 'COMARA', 'CPBV-CC', 'CRCEA-SE', 'DACTA I', 'DACTA II', 'DACTA III',
@@ -18,33 +17,39 @@ const SISTRAN_UNITS = [
     'GAP-DF', 'GAP-GL', 'GAP-LS', 'GAP-MN', 'GAP-RF', 'GAP-RJ', 'GAP-SJ', 'GAP-SP', 'ICEA', 'PAME'
 ];
 
-// Expor funções globais para eventos no HTML
+// Expor funções globais
 window.processFile = processFile;
 window.applyUnitFilter = applyUnitFilter;
 window.skipUnitFilter = skipUnitFilter;
 window.goBack = goBack;
+window.goBackFromHistory = goBackFromHistory;
 window.showUnitCountChart = showUnitCountChart;
 window.showStatusCountChart = showStatusCountChart;
 window.showAvailabilityTable = showAvailabilityTable;
 window.showAvailabilityChart = showAvailabilityChart;
 window.sortTable = sortTable;
+window.showHistoryScreen = showHistoryScreen;
+window.showHistoricalData = showHistoricalData;
+window.exportHistory = exportHistory;
+window.importHistory = importHistory;
+window.triggerImportHistory = triggerImportHistory;
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOMContentLoaded: Verificando Chart.js e datalabels...');
     if (typeof Chart === 'undefined') {
-        console.error('Chart.js não carregou. Verifique a conexão com a CDN.');
-        document.getElementById('uploadError').textContent = 'Erro: Chart.js não carregado. Verifique sua conexão com a internet.';
+        console.error('Chart.js não carregou.');
+        document.getElementById('uploadError').textContent = 'Erro: Chart.js não carregado.';
     } else if (typeof ChartDataLabels === 'undefined') {
-        console.error('Chart.js datalabels não carregou. Verifique a conexão com a CDN.');
-        document.getElementById('uploadError').textContent = 'Erro: Plugin datalabels não carregado. Verifique sua conexão com a internet.';
+        console.error('Chart.js datalabels não carregou.');
+        document.getElementById('uploadError').textContent = 'Erro: Plugin datalabels não carregado.';
     } else {
         console.log('Chart.js e datalabels carregados com sucesso.');
         Chart.register(ChartDataLabels);
     }
 });
 
-function processFile() {
+async function processFile() {
     console.log('processFile chamado.');
     const fileInput = document.getElementById('fileInput');
     const file = fileInput.files[0];
@@ -67,7 +72,7 @@ function processFile() {
 
             if (!planilhaData || planilhaData.length === 0) {
                 console.log('Nenhum dado encontrado na planilha.');
-                document.getElementById('uploadError').textContent = 'Nenhum dado encontrado na planilha. Verifique o arquivo.';
+                document.getElementById('uploadError').textContent = 'Nenhum dado encontrado na planilha.';
                 return;
             }
 
@@ -75,14 +80,13 @@ function processFile() {
             showFilterScreen();
         } catch (error) {
             console.error('Erro ao processar a planilha:', error);
-            document.getElementById('uploadError').textContent = 'Erro ao processar a planilha. Verifique se o arquivo é um Excel válido (.xlsx ou .xls).';
+            document.getElementById('uploadError').textContent = 'Erro ao processar a planilha.';
         }
     };
     reader.readAsArrayBuffer(file);
 }
 
 function showFilterScreen() {
-    // Extrair unidades únicas
     availableUnits = [];
     const unitSet = new Set();
     let hasUnitColumn = false;
@@ -101,13 +105,11 @@ function showFilterScreen() {
     availableUnits = [...unitSet];
     console.log('Unidades disponíveis:', availableUnits);
 
-    // Separar unidades em Elos do SISTRAN e Outros
     const sistranUnits = availableUnits.filter(unit => SISTRAN_UNITS.includes(unit)).sort();
     const otherUnits = availableUnits.filter(unit => !SISTRAN_UNITS.includes(unit)).sort();
     console.log('Elos do SISTRAN:', sistranUnits);
     console.log('Outros:', otherUnits);
 
-    // Renderizar lista de Elos do SISTRAN
     const sistranList = document.getElementById('sistranUnitsList');
     sistranList.innerHTML = '';
     if (hasUnitColumn && sistranUnits.length > 0) {
@@ -123,7 +125,6 @@ function showFilterScreen() {
         sistranList.innerHTML = '<p>Nenhuma unidade do SISTRAN encontrada.</p>';
     }
 
-    // Renderizar lista de Outros
     const otherList = document.getElementById('otherUnitsList');
     otherList.innerHTML = '';
     if (hasUnitColumn && otherUnits.length > 0) {
@@ -139,219 +140,222 @@ function showFilterScreen() {
         otherList.innerHTML = '<p>Nenhuma outra unidade encontrada.</p>';
     }
 
-    // Exibir mensagem de erro se necessário
-    if (!hasUnitColumn) {
-        document.getElementById('filterError').textContent = 'Coluna "Unidade" não encontrada ou sem dados válidos. Clique em "Prosseguir sem Remover" para continuar.';
-    } else if (availableUnits.length === 0) {
-        document.getElementById('filterError').textContent = 'Nenhuma unidade válida encontrada na planilha. Clique em "Prosseguir sem Remover" para continuar.';
-    } else {
-        document.getElementById('filterError').textContent = '';
-    }
-
-    // Esconder outras telas e mostrar tela de filtro
-    document.getElementById('uploadScreen').classList.remove('active');
-    document.getElementById('analysisScreen').classList.remove('active');
-    document.getElementById('filterScreen').classList.add('active');
+    showScreen('filterScreen');
 }
 
-function applyUnitFilter() {
-    console.log('Aplicando filtro de unidades...');
+async function applyUnitFilter() {
     const checkboxes = document.querySelectorAll('.unit-checkbox:checked');
     const unitsToRemove = Array.from(checkboxes).map(cb => cb.value);
     console.log('Unidades a remover:', unitsToRemove);
 
-    if (unitsToRemove.length === availableUnits.length && availableUnits.length > 0) {
-        document.getElementById('filterError').textContent = 'Não é possível remover todas as unidades. Selecione pelo menos uma unidade para manter.';
-        return;
+    if (unitsToRemove.length > 0) {
+        planilhaData = planilhaData.filter(row => {
+            const unitKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'unidade');
+            return unitKey && !unitsToRemove.includes(String(row[unitKey]).trim());
+        });
+        console.log('Dados após filtro:', planilhaData.length);
     }
 
-    // Filtrar planilhaData
-    planilhaData = planilhaData.filter(row => {
-        const unitKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'unidade');
-        const unit = unitKey && row[unitKey] !== undefined && row[unitKey] !== null ? String(row[unitKey]).trim() : '';
-        return !unitsToRemove.includes(unit);
-    });
-
-    console.log('Dados após filtro:', planilhaData.length, 'registros');
+    await saveDataToServer();
     showAnalysisScreen();
 }
 
-function skipUnitFilter() {
-    console.log('Prosseguindo sem remover unidades.');
+async function skipUnitFilter() {
+    console.log('Prosseguindo sem filtro.');
+    await saveDataToServer();
     showAnalysisScreen();
+}
+
+async function saveDataToServer() {
+    try {
+        // Processar dados para salvar
+        const { unitCount, totalRecords } = processUnitData(planilhaData);
+        const { availability } = processAvailabilityData(planilhaData);
+        const today = new Date().toISOString().split('T')[0]; // ex.: 2025-05-09
+
+        const dataToSave = {
+            date: today,
+            totalRecords,
+            unitCount,
+            availability,
+        };
+
+        // Enviar para Netlify Function
+        const response = await fetch('/.netlify/functions/save-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dataToSave),
+        });
+
+        if (!response.ok) {
+            throw new Error('Erro ao salvar dados no servidor');
+        }
+
+        console.log('Dados salvos com sucesso:', await response.json());
+    } catch (error) {
+        console.error('Erro ao salvar dados:', error);
+        document.getElementById('analysisError').textContent = 'Erro ao salvar dados no servidor.';
+    }
 }
 
 function showAnalysisScreen() {
-    const totalRecords = planilhaData.length;
+    const { totalRecords } = processUnitData(planilhaData);
     document.getElementById('totalRecords').textContent = totalRecords;
-
-    document.getElementById('uploadScreen').classList.remove('active');
-    document.getElementById('filterScreen').classList.remove('active');
-    document.getElementById('analysisScreen').classList.add('active');
-    document.getElementById('uploadError').textContent = '';
-    document.getElementById('unitChartContainer').classList.remove('active');
-    document.getElementById('statusChartContainer').classList.remove('active');
-    document.getElementById('availabilityTableContainer').classList.remove('active');
-
-    if (unitChartInstance) {
-        unitChartInstance.destroy();
-        unitChartInstance = null;
-    }
-    if (statusChartInstance) {
-        statusChartInstance.destroy();
-        statusChartInstance = null;
-    }
-    if (availabilityChartInstance) {
-        availabilityChartInstance.destroy();
-        availabilityChartInstance = null;
-    }
-    currentSort = { column: 'total', direction: 'desc' };
-}
-
-function goBack() {
-    if (planilhaData) {
-        showFilterScreen();
-    } else {
-        document.getElementById('analysisScreen').classList.remove('active');
-        document.getElementById('filterScreen').classList.remove('active');
-        document.getElementById('uploadScreen').classList.add('active');
-        document.getElementById('fileInput').value = '';
-        document.getElementById('analysisError').textContent = '';
-    }
+    showScreen('analysisScreen');
 }
 
 function showUnitCountChart() {
-    if (!planilhaData) {
-        document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload de uma planilha.';
-        return;
-    }
-
-    document.getElementById('statusChartContainer').classList.remove('active');
-    document.getElementById('availabilityTableContainer').classList.remove('active');
-    if (statusChartInstance) {
-        statusChartInstance.destroy();
-        statusChartInstance = null;
-    }
-    if (availabilityChartInstance) {
-        availabilityChartInstance.destroy();
-        availabilityChartInstance = null;
-    }
-
-    const { unitCount, hasUnitColumn } = processUnitData(planilhaData);
-    console.log('Contagem de Unidades:', unitCount, 'Coluna Unidade:', hasUnitColumn);
-
-    unitChartInstance = renderUnitChart(unitChartInstance, unitCount, hasUnitColumn);
-    if (unitChartInstance || !hasUnitColumn) {
-        document.getElementById('unitChartContainer').classList.add('active');
-    }
+    const { unitCount, sortedUnits } = processUnitData(planilhaData);
+    if (unitChartInstance) unitChartInstance.destroy();
+    unitChartInstance = renderUnitChart('unitChart', sortedUnits, unitCount);
+    document.getElementById('unitChartContainer').style.display = 'block';
+    document.getElementById('statusChartContainer').style.display = 'none';
+    document.getElementById('availabilityTableContainer').style.display = 'none';
 }
 
 function showStatusCountChart() {
-    if (!planilhaData) {
-        document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload de uma planilha.';
-        return;
-    }
-
-    document.getElementById('unitChartContainer').classList.remove('active');
-    document.getElementById('availabilityTableContainer').classList.remove('active');
-    if (unitChartInstance) {
-        unitChartInstance.destroy();
-        unitChartInstance = null;
-    }
-    if (availabilityChartInstance) {
-        availabilityChartInstance.destroy();
-        availabilityChartInstance = null;
-    }
-
-    const { statusCount, hasStatusColumn, totalValidStatus } = processStatusData(planilhaData);
-    console.log('Contagem de Status:', statusCount, 'Coluna Status:', hasStatusColumn);
-
-    statusChartInstance = renderStatusChart(statusChartInstance, statusCount, hasStatusColumn, totalValidStatus);
-    if (statusChartInstance || !hasStatusColumn) {
-        document.getElementById('statusChartContainer').classList.add('active');
-    }
+    const { statusCount, sortedStatuses } = processStatusData(planilhaData);
+    if (statusChartInstance) statusChartInstance.destroy();
+    statusChartInstance = renderStatusChart('statusChart', sortedStatuses, statusCount);
+    document.getElementById('unitChartContainer').style.display = 'none';
+    document.getElementById('statusChartContainer').style.display = 'block';
+    document.getElementById('availabilityTableContainer').style.display = 'none';
 }
 
 function showAvailabilityTable() {
-    if (!planilhaData) {
-        console.log('Erro: Nenhum dado carregado.');
-        document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload de uma planilha.';
-        return;
-    }
-
-    console.log('Mostrando tabela de Disponibilidade por OM...');
-
-    document.getElementById('unitChartContainer').classList.remove('active');
-    document.getElementById('statusChartContainer').classList.remove('active');
-    if (unitChartInstance) {
-        unitChartInstance.destroy();
-        unitChartInstance = null;
-    }
-    if (statusChartInstance) {
-        statusChartInstance.destroy();
-        statusChartInstance = null;
-    }
-    if (availabilityChartInstance) {
-        availabilityChartInstance.destroy();
-        availabilityChartInstance = null;
-    }
-
-    document.getElementById('availabilityTable').classList.add('active');
-    document.getElementById('availabilityChart').classList.remove('active');
-    document.getElementById('availabilityTableContainer').classList.add('active');
+    const { sortedUnits, availability } = processAvailabilityData(planilhaData);
+    renderAvailabilityTable('availabilityTableBody', sortedUnits, availability);
+    document.getElementById('unitChartContainer').style.display = 'none';
+    document.getElementById('statusChartContainer').style.display = 'none';
+    document.getElementById('availabilityTableContainer').style.display = 'block';
+    document.getElementById('availabilityTable').style.display = 'table';
+    document.getElementById('availabilityChart').style.display = 'none';
     document.getElementById('generateChartButton').style.display = 'inline-block';
     document.getElementById('backToTableButton').style.display = 'none';
-
-    const { hasUnitColumn, hasStatusColumn, sortedUnits, errorMessage } = processAvailabilityData(planilhaData);
-    if (!hasUnitColumn || !hasStatusColumn) {
-        console.log('Erro: Colunas ausentes:', errorMessage);
-        document.getElementById('analysisError').textContent = errorMessage;
-        return;
-    }
-
-    renderAvailabilityTable(sortedUnits, currentSort);
 }
 
 function showAvailabilityChart() {
-    if (!planilhaData) {
-        console.log('Erro: Nenhum dado carregado.');
-        document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload de uma planilha.';
-        return;
-    }
-
-    console.log('Mostrando gráfico de Disponibilidade por OM...');
-
-    document.getElementById('availabilityTable').classList.remove('active');
-    document.getElementById('availabilityChart').classList.add('active');
-    document.getElementById('availabilityTableContainer').classList.add('active');
+    const { sortedUnits, availability } = processAvailabilityData(planilhaData);
+    if (availabilityChartInstance) availabilityChartInstance.destroy();
+    availabilityChartInstance = renderAvailabilityChart('availabilityChart', sortedUnits, availability);
+    document.getElementById('availabilityTable').style.display = 'none';
+    document.getElementById('availabilityChart').style.display = 'block';
     document.getElementById('generateChartButton').style.display = 'none';
     document.getElementById('backToTableButton').style.display = 'inline-block';
-
-    const { hasUnitColumn, hasStatusColumn, sortedUnits, errorMessage } = processAvailabilityData(planilhaData);
-    if (!hasUnitColumn || !hasStatusColumn) {
-        console.log('Erro: Colunas ausentes:', errorMessage);
-        document.getElementById('analysisError').textContent = errorMessage;
-        return;
-    }
-
-    availabilityChartInstance = renderAvailabilityChart(availabilityChartInstance, sortedUnits, hasUnitColumn, hasStatusColumn);
-    if (availabilityChartInstance || !hasUnitColumn || !hasStatusColumn) {
-        document.getElementById('availabilityTableContainer').classList.add('active');
-    }
 }
 
 function sortTable(column) {
-    console.log(`Ordenando por ${column} (${currentSort.column === column && currentSort.direction === 'asc' ? 'descendente' : 'crescente'})`);
+    currentSort = sortAvailabilityTable('availabilityTableBody', column, currentSort);
+}
 
-    const direction = (currentSort.column === column && currentSort.direction === 'asc') ? 'desc' : 'asc';
-    currentSort = { column, direction };
+async function showHistoryScreen() {
+    try {
+        // Recuperar dados históricos
+        const response = await fetch('/.netlify/functions/get-history');
+        if (!response.ok) {
+            throw new Error('Erro ao recuperar histórico');
+        }
+        const history = await response.json();
 
-    const { hasUnitColumn, hasStatusColumn, sortedUnits, errorMessage } = processAvailabilityData(planilhaData);
-    if (!hasUnitColumn || !hasStatusColumn) {
-        console.log('Erro: Colunas ausentes:', errorMessage);
-        document.getElementById('analysisError').textContent = errorMessage;
+        // Preencher select com datas
+        const dateSelect = document.getElementById('historyDateSelect');
+        dateSelect.innerHTML = '<option value="">Selecione uma data</option>';
+        history.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.date;
+            option.textContent = item.date;
+            dateSelect.appendChild(option);
+        });
+
+        // Renderizar gráfico histórico (Total de Registros por dia)
+        if (historyChartInstance) historyChartInstance.destroy();
+        historyChartInstance = renderHistoryChart('historyChart', history);
+        document.getElementById('historyChartContainer').style.display = 'block';
+
+        showScreen('historyScreen');
+    } catch (error) {
+        console.error('Erro ao carregar histórico:', error);
+        document.getElementById('historyError').textContent = 'Erro ao carregar histórico.';
+    }
+}
+
+function showHistoricalData() {
+    const dateSelect = document.getElementById('historyDateSelect');
+    const selectedDate = dateSelect.value;
+    if (selectedDate) {
+        // Implementar visualização de dados de uma data específica (ex.: gráficos/tabelas)
+        console.log('Exibir dados de:', selectedDate);
+        // Pode reutilizar showUnitCountChart, showStatusCountChart, etc., com dados do servidor
+    }
+}
+
+function exportHistory() {
+    // Exportar histórico como JSON
+    fetch('/.netlify/functions/get-history')
+        .then(response => response.json())
+        .then(history => {
+            const dataStr = JSON.stringify(history, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'historico.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            console.error('Erro ao exportar histórico:', error);
+            document.getElementById('historyError').textContent = 'Erro ao exportar histórico.';
+        });
+}
+
+function triggerImportHistory() {
+    document.getElementById('importHistoryInput').click();
+}
+
+function importHistory() {
+    const fileInput = document.getElementById('importHistoryInput');
+    const file = fileInput.files[0];
+    if (!file) {
+        document.getElementById('historyError').textContent = 'Selecione um arquivo JSON.';
         return;
     }
 
-    sortAvailabilityTable(sortedUnits, currentSort);
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const history = JSON.parse(e.target.result);
+            // Enviar para o servidor
+            for (const item of history) {
+                await fetch('/.netlify/functions/save-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(item),
+                });
+            }
+            showHistoryScreen();
+        } catch (error) {
+            console.error('Erro ao importar histórico:', error);
+            document.getElementById('historyError').textContent = 'Erro ao importar histórico.';
+        }
+    };
+    reader.readAsText(file);
+}
+
+function goBack() {
+    showScreen('analysisScreen');
+    document.getElementById('unitChartContainer').style.display = 'none';
+    document.getElementById('statusChartContainer').style.display = 'none';
+    document.getElementById('availabilityTableContainer').style.display = 'none';
+}
+
+function goBackFromHistory() {
+    showScreen('analysisScreen');
+}
+
+function showScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(screen => {
+        screen.classList.remove('active');
+    });
+    document.getElementById(screenId).classList.add('active');
 }
