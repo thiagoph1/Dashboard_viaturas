@@ -71,7 +71,9 @@ async function loadAvailableDates() {
         const response = await fetch('/.netlify/functions/get-dates');
         console.log('Resposta recebida:', response.status, response.statusText);
         if (!response.ok) {
-            throw new Error(`Erro ao buscar datas: ${response.statusText}`);
+            const errorBody = await response.text();
+            console.error('Corpo do erro:', errorBody);
+            throw new Error(`Erro ao buscar datas: ${response.status} ${response.statusText}`);
         }
         const dates = await response.json();
         console.log('Datas recebidas:', dates);
@@ -82,6 +84,7 @@ async function loadAvailableDates() {
             document.getElementById('initialError').textContent = 'Nenhuma data encontrada no banco de dados.';
         } else {
             dates.forEach(date => {
+                console.log('Adicionando data:', date);
                 const option = document.createElement('option');
                 option.value = date;
                 option.textContent = date;
@@ -95,6 +98,7 @@ async function loadAvailableDates() {
     }
 }
 
+// ... (o restante do main.js permanece inalterado, incluindo loadDataByDate, convertToPlanilhaData, etc.)
 async function loadDataByDate() {
     console.log('Carregando dados por data...');
     const dateSelect = document.getElementById('dateSelect');
