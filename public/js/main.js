@@ -4,6 +4,7 @@ import { renderAvailabilityTable, sortAvailabilityTable } from './tableRenderer.
 
 // Estado global
 let planilhaData = null;
+let historicalData = null; // Para dados carregados do MongoDB
 let unitChartInstance = null;
 let statusChartInstance = null;
 let availabilityChartInstance = null;
@@ -33,21 +34,125 @@ window.showHistoricalData = showHistoricalData;
 window.exportHistory = exportHistory;
 window.importHistory = importHistory;
 window.triggerImportHistory = triggerImportHistory;
+window.deleteDuplicates = deleteDuplicates;
+window.loadDataByDate = loadDataByDate;
+window.showUploadScreen = showUploadScreen;
+window.goBackToInitial = goBackToInitial;
 
 // Inicialização
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOMContentLoaded: Verificando Chart.js e datalabels...');
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('DOMContentLoaded: Inicializando...');
     if (typeof Chart === 'undefined') {
         console.error('Chart.js não carregou.');
-        document.getElementById('uploadError').textContent = 'Erro: Chart.js não carregado.';
+        document.getElementById('initialError').textContent = 'Erro: Chart.js não carregado.';
     } else if (typeof ChartDataLabels === 'undefined') {
         console.error('Chart.js datalabels não carregou.');
-        document.getElementById('uploadError').textContent = 'Erro: Plugin datalabels não carregado.';
+        document.getElementById('initialError').textContent = 'Erro: Plugin datalabels não carregado.';
     } else {
-        console.log('Chart.js e datalabels carregados com sucesso.');
+        console.log('Chart.js e datalabels carregados.');
         Chart.register(ChartDataLabels);
     }
+
+    // Carregar datas disponíveis
+    await loadAvailableDates();
 });
+
+async function loadAvailableDates() {
+    console.log('Carregando datas disponíveis...');
+    try {
+        const response = await fetch('/.netlify/functions/get-dates');
+        if (!response.ok) {
+            throw new Error('Erro ao buscar datas: ' + response.statusText);
+        }
+        const dates = await response.json();
+        console.log('Datas recebidas:', dates);
+
+        const dateSelect = document.getElementById('dateSelect');
+        dateSelect.innerHTML = '<option value="">Selecione uma data</option>';
+        dates.forEach(date => {
+            const option = document.createElement('option');
+            option.value = date;
+            option.textContent = date;
+            dateSelect.appendChild(option);
+        });
+
+        document.getElementById('initialError').textContent = '';
+    } catch (error) {
+        console.error('Erro em loadAvailableDates:', error);
+        document.getElementById('initialError').textContent = 'Erro ao carregar datas disponíveis.';
+    }
+}
+
+async function loadDataByDate() {
+    console.log('Carregando dados por data...');
+    const dateSelect = document.getElementById('dateSelect');
+    const selectedDate = dateSelect.value;
+    if (!selectedDate) {
+        document.getElementById('initialError').textContent = 'Selecione uma data.';
+        return;
+    }
+
+    try {
+        const response = await fetch('/.netlify/functions/get-data-by-date', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date: selectedDate }),
+        });
+        if (!response.ok) {
+            throw new Error('Erro ao buscar dados: ' + response.statusText);
+        }
+        const data = await response.json();
+        console.log('Dados recebidos:', data);
+
+        if (!data || !data.unitCount || !data.availability) {
+            throw new Error('Dados inválidos recebidos');
+        }
+
+        // Converter dados históricos para formato compatível com planilhaData
+        historicalData = data;
+        planilhaData = convertToPlanilhaData(data);
+        console.log('planilhaData convertido:', planilhaData);
+
+        showAnalysisScreen();
+    } catch (error) {
+        console.error('Erro em loadDataByDate:', error);
+        document.getElementById('initialError').textContent = 'Erro ao carregar dados da data selecionada.';
+    }
+}
+
+function convertToPlanilhaData(data) {
+    console.log('Convertendo dados históricos para planilhaData...');
+    const result = [];
+    data.availability.forEach(item => {
+        // Criar registros simulando a planilha original
+        for (let i = 0; i < item.available; i++) {
+            result.push({
+                Unidade: item.unit,
+                StatusPatrimonio: 'Em Uso'
+            });
+        }
+        for (let i = 0; i < item.unavailable; i++) {
+            result.push({
+                Unidade: item.unit,
+                StatusPatrimonio: 'Inativo'
+            });
+        }
+    });
+    return result;
+}
+
+function showUploadScreen() {
+    console.log('Exibindo uploadScreen...');
+    planilhaData = null;
+    historicalData = null;
+    showScreen('uploadScreen');
+}
+
+function goBackToInitial() {
+    console.log('Voltando para initialScreen...');
+    showScreen('initialScreen');
+    loadAvailableDates();
+}
 
 function processFile() {
     console.log('processFile chamado.');
@@ -221,21 +326,28 @@ async function saveDataToServer() {
         };
         console.log('dataToSave:', dataToSave);
 
-        // Enviar para Netlify Function
-        const response = await fetch('/.netlify/functions/save-data', {
+        // Verificar duplicatas
+        const responseCheck = await fetch('/.netlify/functions/get-data-by-date', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dataToSave),
+            body: JSON.stringify({ date: today }),
         });
-
-        const responseBody = await response.json();
-        console.log('Resposta do servidor:', responseBody);
-
-        if (!response.ok) {
-            throw new Error(`Erro do servidor: ${responseBody.error || response.statusText}`);
+        if (responseCheck.ok) {
+            console.log('Documento existente, atualizando...');
+            await fetch('/.netlify/functions/save-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...dataToSave, update: true }),
+            });
+        } else {
+            await fetch('/.netlify/functions/save-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dataToSave),
+            });
         }
 
-        console.log('Dados salvos com sucesso:', responseBody);
+        console.log('Dados salvos com sucesso');
     } catch (error) {
         console.error('Erro ao salvar dados:', error);
         throw error;
@@ -248,8 +360,8 @@ function showAnalysisScreen() {
 
     if (!planilhaData || planilhaData.length === 0) {
         console.error('Nenhum dado disponível para exibir.');
-        document.getElementById('analysisError').textContent = 'Nenhum dado disponível. Volte e faça upload de uma planilha.';
-        showScreen('uploadScreen');
+        document.getElementById('analysisError').textContent = 'Nenhum dado disponível. Volte e faça upload ou selecione uma data.';
+        showScreen('initialScreen');
         return;
     }
 
@@ -296,7 +408,7 @@ function showUnitCountChart() {
     console.log('Exibindo gráfico de unidades...');
     if (!planilhaData) {
         console.error('Nenhum dado carregado.');
-        document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload de uma planilha.';
+        document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload ou selecione uma data.';
         return;
     }
 
@@ -318,7 +430,7 @@ function showStatusCountChart() {
     console.log('Exibindo gráfico de status...');
     if (!planilhaData) {
         console.error('Nenhum dado carregado.');
-        document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload de uma planilha.';
+        document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload ou selecione uma data.';
         return;
     }
 
@@ -340,12 +452,19 @@ function showAvailabilityTable() {
     console.log('Exibindo tabela de disponibilidade...');
     if (!planilhaData) {
         console.error('Nenhum dado carregado.');
-        document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload de uma planilha.';
+        document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload ou selecione uma data.';
         return;
     }
 
     try {
-        const { sortedUnits, availability } = processAvailabilityData(planilhaData);
+        const { sortedUnits, availability, hasUnitColumn, hasStatusColumn, errorMessage } = processAvailabilityData(planilhaData);
+        console.log('sortedUnits:', sortedUnits);
+        console.log('availability:', availability);
+        if (!hasUnitColumn || !hasStatusColumn) {
+            console.error('Erro de colunas:', errorMessage);
+            document.getElementById('analysisError').textContent = errorMessage;
+            return;
+        }
         renderAvailabilityTable('availabilityTableBody', sortedUnits, availability);
         document.getElementById('unitChartContainer').style.display = 'none';
         document.getElementById('statusChartContainer').style.display = 'none';
@@ -365,7 +484,7 @@ function showAvailabilityChart() {
     console.log('Exibindo gráfico de disponibilidade...');
     if (!planilhaData) {
         console.error('Nenhum dado carregado.');
-        document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload de uma planilha.';
+        document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload ou selecione uma data.';
         return;
     }
 
@@ -425,12 +544,39 @@ async function showHistoryScreen() {
     }
 }
 
+async function deleteDuplicates() {
+    console.log('Excluindo duplicatas...');
+    const dateSelect = document.getElementById('historyDateSelect');
+    const selectedDate = dateSelect.value;
+    if (!selectedDate) {
+        document.getElementById('historyError').textContent = 'Selecione uma data.';
+        return;
+    }
+    try {
+        const response = await fetch('/.netlify/functions/delete-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date: selectedDate }),
+        });
+        const result = await response.json();
+        if (response.ok) {
+            document.getElementById('historyError').textContent = result.message;
+            showHistoryScreen();
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error) {
+        console.error('Erro ao excluir duplicatas:', error);
+        document.getElementById('historyError').textContent = 'Erro ao excluir duplicatas.';
+    }
+}
+
 function showHistoricalData() {
     const dateSelect = document.getElementById('historyDateSelect');
     const selectedDate = dateSelect.value;
     if (selectedDate) {
         console.log('Exibir dados de:', selectedDate);
-        // Implementar visualização de dados de uma data específica
+        loadDataByDate(); // Reutilizar função para carregar dados
     }
 }
 
@@ -489,7 +635,12 @@ function importHistory() {
 
 function goBack() {
     console.log('Voltando...');
-    showScreen('filterScreen');
+    if (historicalData) {
+        showScreen('initialScreen');
+        loadAvailableDates();
+    } else {
+        showScreen('filterScreen');
+    }
 }
 
 function goBackFromHistory() {
@@ -500,6 +651,7 @@ function goBackFromHistory() {
 function showScreen(screenId) {
     console.log('Exibindo tela:', screenId);
     document.querySelectorAll('.screen').forEach(screen => {
+        console.log('Removendo active de:', screen.id);
         screen.classList.remove('active');
     });
     const screenElement = document.getElementById(screenId);
@@ -507,6 +659,6 @@ function showScreen(screenId) {
         screenElement.classList.add('active');
     } else {
         console.error('Tela não encontrada:', screenId);
-        document.getElementById('analysisError').textContent = `Erro: Tela ${screenId} não encontrada.`;
+        document.getElementById('initialError').textContent = `Erro: Tela ${screenId} não encontrada.`;
     }
 }

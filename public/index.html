@@ -10,11 +10,25 @@
     <div class="container">
         <h1>Dashboard de Análise de Planilha</h1>
 
-        <!-- Primeira Tela: Upload da Planilha -->
-        <div id="uploadScreen" class="screen active">
+        <!-- Tela Inicial: Seleção de Data -->
+        <div id="initialScreen" class="screen active">
+            <h2>Selecionar Dados Existentes ou Carregar Nova Planilha</h2>
+            <div class="initial-controls">
+                <label for="dateSelect">Selecione uma data para visualizar os dados:</label>
+                <select id="dateSelect" onchange="loadDataByDate()">
+                    <option value="">Selecione uma data</option>
+                </select>
+                <button onclick="showUploadScreen()">Carregar Nova Planilha</button>
+            </div>
+            <div id="initialError" class="error-message"></div>
+        </div>
+
+        <!-- Tela de Upload da Planilha -->
+        <div id="uploadScreen" class="screen">
             <div class="upload-section">
                 <input type="file" id="fileInput" accept=".xlsx, .xls">
                 <button onclick="processFile()">Carregar Planilha</button>
+                <button onclick="goBackToInitial()">Voltar</button>
             </div>
             <div id="uploadError" class="error-message"></div>
         </div>
@@ -40,7 +54,7 @@
             <div id="filterError" class="error-message"></div>
         </div>
 
-        <!-- Segunda Tela: Seleção de Funções -->
+        <!-- Tela de Análise -->
         <div id="analysisScreen" class="screen">
             <div class="summary">
                 <p>Total de Registros: <span id="totalRecords">0</span></p>
@@ -89,6 +103,7 @@
                 <button onclick="exportHistory()">Exportar Histórico</button>
                 <input type="file" id="importHistoryInput" accept=".json" onchange="importHistory()">
                 <button onclick="triggerImportHistory()">Importar Histórico</button>
+                <button onclick="deleteDuplicates()">Excluir Duplicatas</button>
             </div>
             <div class="chart-container" id="historyChartContainer">
                 <canvas id="historyChart"></canvas>

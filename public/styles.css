@@ -26,9 +26,17 @@ h3 {
 .screen.active {
     display: block;
 }
-.upload-section {
+.upload-section, .initial-controls {
     margin-bottom: 20px;
     text-align: center;
+}
+.initial-controls select {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin: 10px;
+    font-size: 1em;
+    min-width: 200px;
 }
 #fileInput, #importHistoryInput {
     padding: 10px;
