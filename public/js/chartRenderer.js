@@ -1,13 +1,21 @@
-export function renderUnitChart(canvasId, sortedUnits, unitCount) {
-    return new Chart(document.getElementById(canvasId), {
+function renderUnitChart(canvasId, sortedUnits, unitCount) {
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js não carregado em renderUnitChart.');
+        throw new Error('Chart.js não carregado.');
+    }
+    if (typeof ChartDataLabels !== 'undefined') {
+        Chart.register(ChartDataLabels);
+    }
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    return new Chart(ctx, {
         type: 'bar',
         data: {
             labels: sortedUnits,
             datasets: [{
-                label: 'Quantidade por Unidade',
+                label: 'Total de Viaturas',
                 data: sortedUnits.map(unit => unitCount[unit] || 0),
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                borderColor: 'rgba(75, 192, 192, 1)',
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
                 borderWidth: 1
             }]
         },
@@ -16,33 +24,26 @@ export function renderUnitChart(canvasId, sortedUnits, unitCount) {
                 datalabels: {
                     anchor: 'end',
                     align: 'top',
-                    formatter: Math.round,
-                    font: {
-                        weight: 'bold'
-                    }
+                    formatter: Math.round
                 }
             },
             scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Quantidade'
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Unidade'
-                    }
-                }
+                y: { beginAtZero: true }
             }
         }
     });
 }
 
-export function renderStatusChart(canvasId, sortedStatuses, statusCount) {
-    return new Chart(document.getElementById(canvasId), {
+function renderStatusChart(canvasId, sortedStatuses, statusCount) {
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js não carregado em renderStatusChart.');
+        throw new Error('Chart.js não carregado.');
+    }
+    if (typeof ChartDataLabels !== 'undefined') {
+        Chart.register(ChartDataLabels);
+    }
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    return new Chart(ctx, {
         type: 'pie',
         data: {
             labels: sortedStatuses,
@@ -50,59 +51,47 @@ export function renderStatusChart(canvasId, sortedStatuses, statusCount) {
                 label: 'Status',
                 data: sortedStatuses.map(status => statusCount[status] || 0),
                 backgroundColor: [
-                    'rgba(255, 99, 132, 0.2)',
-                    'rgba(54, 162, 235, 0.2)',
-                    'rgba(255, 206, 86, 0.2)',
-                    'rgba(75, 192, 192, 0.2)',
-                    'rgba(153, 102, 255, 0.2)'
-                ],
-                borderColor: [
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 206, 86, 1)',
-                    'rgba(75, 192, 192, 1)',
-                    'rgba(153, 102, 255, 1)'
-                ],
-                borderWidth: 1
+                    'rgba(75, 192, 192, 0.5)',
+                    'rgba(255, 99, 132, 0.5)',
+                    'rgba(255, 206, 86, 0.5)'
+                ]
             }]
         },
         options: {
             plugins: {
                 datalabels: {
-                    formatter: (value, ctx) => {
-                        let sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                        let percentage = (value * 100 / sum).toFixed(2) + '%';
-                        return percentage;
-                    },
-                    color: '#fff',
-                    font: {
-                        weight: 'bold'
-                    }
+                    anchor: 'end',
+                    align: 'top',
+                    formatter: Math.round
                 }
             }
         }
     });
 }
 
-export function renderAvailabilityChart(canvasId, sortedUnits, availability) {
-    return new Chart(document.getElementById(canvasId), {
+function renderAvailabilityChart(canvasId, sortedUnits, availability) {
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js não carregado em renderAvailabilityChart.');
+        throw new Error('Chart.js não carregado.');
+    }
+    if (typeof ChartDataLabels !== 'undefined') {
+        Chart.register(ChartDataLabels);
+    }
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    return new Chart(ctx, {
         type: 'bar',
         data: {
             labels: sortedUnits,
             datasets: [
                 {
-                    label: 'Disponível',
-                    data: sortedUnits.map(unit => availability.find(a => a.unit === unit)?.available || 0),
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
+                    label: 'Disponíveis',
+                    data: availability.map(item => item.available),
+                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
                 },
                 {
-                    label: 'Indisponível',
-                    data: sortedUnits.map(unit => availability.find(a => a.unit === unit)?.unavailable || 0),
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    borderWidth: 1
+                    label: 'Indisponíveis',
+                    data: availability.map(item => item.unavailable),
+                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
                 }
             ]
         },
@@ -111,68 +100,47 @@ export function renderAvailabilityChart(canvasId, sortedUnits, availability) {
                 datalabels: {
                     anchor: 'end',
                     align: 'top',
-                    formatter: Math.round,
-                    font: {
-                        weight: 'bold'
-                    }
+                    formatter: Math.round
                 }
             },
             scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Quantidade'
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Unidade'
-                    }
-                }
+                y: { beginAtZero: true }
             }
         }
     });
 }
 
-export function renderHistoryChart(canvasId, history) {
-    return new Chart(document.getElementById(canvasId), {
+function renderHistoryChart(canvasId, history) {
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js não carregado em renderHistoryChart.');
+        throw new Error('Chart.js não carregado.');
+    }
+    if (typeof ChartDataLabels !== 'undefined') {
+        Chart.register(ChartDataLabels);
+    }
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    return new Chart(ctx, {
         type: 'line',
         data: {
             labels: history.map(item => item.date),
             datasets: [{
-                label: 'Total de Registros por Dia',
+                label: 'Total de Viaturas',
                 data: history.map(item => item.totalRecords),
                 fill: false,
-                borderColor: 'rgba(75, 192, 192, 1)',
+                borderColor: 'rgba(54, 162, 235, 1)',
                 tension: 0.1
             }]
         },
         options: {
             plugins: {
                 datalabels: {
+                    anchor: 'end',
                     align: 'top',
-                    formatter: Math.round,
-                    font: {
-                        weight: 'bold'
-                    }
+                    formatter: Math.round
                 }
             },
             scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Total de Registros'
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Data'
-                    }
-                }
+                y: { beginAtZero: true }
             }
         }
     });

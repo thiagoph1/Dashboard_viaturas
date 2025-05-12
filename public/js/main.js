@@ -1,7 +1,3 @@
-import { processUnitData, processStatusData, processAvailabilityData } from './dataProcessor.js';
-import { renderUnitChart, renderStatusChart, renderAvailabilityChart, renderHistoryChart } from './chartRenderer.js';
-import { renderAvailabilityTable, sortAvailabilityTable } from './tableRenderer.js';
-
 // Estado global
 let planilhaData = null;
 let historicalData = null;
@@ -44,13 +40,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof Chart === 'undefined') {
         console.error('Chart.js não carregou.');
         document.getElementById('initialError').textContent = 'Erro: Chart.js não carregado.';
-    } else if (typeof ChartDataLabels === 'undefined') {
+        return;
+    }
+    if (typeof ChartDataLabels === 'undefined') {
         console.error('Chart.js datalabels não carregou.');
         document.getElementById('initialError').textContent = 'Erro: Plugin datalabels não carregado.';
-    } else {
-        console.log('Chart.js e datalabels carregados.');
-        Chart.register(ChartDataLabels);
+        return;
     }
+    console.log('Chart.js e datalabels carregados.');
+    Chart.register(ChartDataLabels);
 
     // Carregar totais diários
     await loadDailyTotals();
