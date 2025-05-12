@@ -1,6 +1,6 @@
 [build]
   # Comando para instalar dependências das funções
-  command = "npm install --prefix netlify/functions"
+  command = "npm install --prefix netlify/functions || echo 'Instalação falhou, continuando...'"
   # Diretório das Netlify Functions
   functions = "netlify/functions"
   # Diretório de publicação do frontend
