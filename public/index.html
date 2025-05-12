@@ -3,57 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard de Viaturas</title>
+    <title>Análise de Viaturas</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script defer src="js/dataProcessor.js"></script>
-    <script defer src="js/tableRenderer.js"></script>
-    <script defer src="js/chartRenderer.js"></script>
-    <script defer src="js/main.js"></script>
 </head>
 <body>
     <!-- Tela Inicial -->
     <div id="initialScreen" class="screen active">
-        <h1>Dashboard de Viaturas da Aeronáutica</h1>
-        <img src="https://www.forte.jor.br/wp-content/uploads/2012/09/foto-abre-grande-dentro.jpg" alt="Viatura da Aeronáutica" class="viatura-image">
-        <h2>Histórico Diário de Viaturas</h2>
-        <table id="dailyTotalsTable">
+        <h1>Análise de Viaturas</h1>
+        <img src="https://www.forte.jor.br/wp-content/uploads/2012/09/foto-abre-grande-dentro.jpg" alt="Viatura" class="viatura-image">
+        <div id="initialError" class="error"></div>
+        <table>
             <thead>
                 <tr>
-                    <th>Data</th>
+                    <th>Data (Mês/Ano)</th>
                     <th>Total de Viaturas</th>
                 </tr>
             </thead>
             <tbody id="dailyTotalsTableBody"></tbody>
         </table>
-        <p id="initialError" class="error"></p>
         <button onclick="showUploadScreen()">Fazer Upload de Nova Planilha</button>
-        <button onclick="showHistoryScreen()">Ver Histórico Completo</button>
+        <button onclick="showHistoryScreen()">Ver Histórico</button>
     </div>
 
     <!-- Tela de Upload -->
     <div id="uploadScreen" class="screen">
         <h1>Upload de Planilha</h1>
-        <input type="file" id="fileInput" accept=".xlsx,.xls">
-        <p id="uploadError" class="error"></p>
+        <div id="uploadError" class="error"></div>
+        <input type="file" id="fileInput" accept=".xlsx, .xls">
         <button onclick="processFile()">Processar Planilha</button>
         <button onclick="goBackToInitial()">Voltar</button>
     </div>
 
     <!-- Tela de Análise -->
     <div id="analysisScreen" class="screen">
-        <h1>Análise de Viaturas</h1>
+        <h1>Análise de Dados</h1>
+        <div id="analysisError" class="error"></div>
         <p>Total de Registros: <span id="totalRecords">0</span></p>
-        <p id="analysisError" class="error"></p>
         <button onclick="showUnitCountChart('sistran')">Gráfico por Unidade (SISTRAN)</button>
         <button onclick="showUnitCountChart('all')">Gráfico por Unidade (Todas)</button>
         <button onclick="showStatusCountChart('sistran')">Gráfico por Status (SISTRAN)</button>
         <button onclick="showStatusCountChart('all')">Gráfico por Status (Todas)</button>
         <button onclick="showAvailabilityTable('sistran')">Tabela de Disponibilidade (SISTRAN)</button>
         <button onclick="showAvailabilityTable('all')">Tabela de Disponibilidade (Todas)</button>
-        <button onclick="showHistoryScreen()">Ver Histórico</button>
         <button onclick="goBack()">Voltar</button>
         <div id="unitChartContainer" style="display: none;">
             <canvas id="unitChart"></canvas>
@@ -62,8 +56,6 @@
             <canvas id="statusChart"></canvas>
         </div>
         <div id="availabilityTableContainer" style="display: none;">
-            <button id="generateChartButton" onclick="showAvailabilityChart(currentType)" style="display: none;">Gerar Gráfico</button>
-            <button id="backToTableButton" onclick="showAvailabilityTable(currentType)" style="display: none;">Voltar para Tabela</button>
             <table id="availabilityTable" style="display: none;">
                 <thead>
                     <tr>
@@ -76,25 +68,32 @@
                 <tbody id="availabilityTableBody"></tbody>
             </table>
             <canvas id="availabilityChart" style="display: none;"></canvas>
+            <button id="generateChartButton" onclick="showAvailabilityChart(currentType)" style="display: none;">Gerar Gráfico</button>
+            <button id="backToTableButton" onclick="showAvailabilityTable(currentType)" style="display: none;">Voltar para Tabela</button>
         </div>
     </div>
 
     <!-- Tela de Histórico -->
     <div id="historyScreen" class="screen">
-        <h1>Histórico de Viaturas</h1>
+        <h1>Histórico de Dados</h1>
+        <div id="historyError" class="error"></div>
         <select id="historyDateSelect">
             <option value="">Selecione uma data</option>
         </select>
-        <button onclick="showHistoricalData()">Exibir Dados</button>
+        <button onclick="showHistoricalData()">Carregar Dados</button>
+        <button onclick="deleteDuplicates()">Excluir Duplicatas</button>
         <button onclick="exportHistory()">Exportar Histórico</button>
         <button onclick="triggerImportHistory()">Importar Histórico</button>
-        <input type="file" id="importHistoryInput" accept=".json" style="display: none;" onchange="importHistory()">
-        <button onclick="deleteDuplicates()">Excluir Duplicatas</button>
-        <p id="historyError" class="error"></p>
+        <input type="file" id="importHistoryInput" style="display: none;" accept=".json" onchange="importHistory()">
+        <button onclick="goBackFromHistory()">Voltar</button>
         <div id="historyChartContainer">
             <canvas id="historyChart"></canvas>
         </div>
-        <button onclick="goBackFromHistory()">Voltar</button>
     </div>
+
+    <script src="js/dataProcessor.js"></script>
+    <script src="js/tableRenderer.js"></script>
+    <script src="js/chartRenderer.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>

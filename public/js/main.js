@@ -50,7 +50,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('Chart.js e datalabels carregados.');
     Chart.register(ChartDataLabels);
 
-    // Carregar totais diários
     await loadDailyTotals();
 });
 
@@ -392,6 +391,7 @@ function showStatusCountChart(type) {
             return;
         }
         const { statusCount, sortedStatuses } = processStatusData(filteredData);
+        console.log('Status processados:', { sortedStatuses, statusCount });
         if (statusChartInstance) statusChartInstance.destroy();
         statusChartInstance = renderStatusChart('statusChart', sortedStatuses, statusCount);
         document.getElementById('unitChartContainer').style.display = 'none';
@@ -420,8 +420,7 @@ function showAvailabilityTable(type) {
             return;
         }
         const { sortedUnits, availability, hasUnitColumn, hasStatusColumn, errorMessage } = processAvailabilityData(filteredData);
-        console.log('sortedUnits:', sortedUnits);
-        console.log('availability:', availability);
+        console.log('Dados para tabela:', { sortedUnits, availability });
         if (!hasUnitColumn || !hasStatusColumn) {
             console.error('Erro de colunas:', errorMessage);
             document.getElementById('analysisError').textContent = errorMessage;
@@ -457,6 +456,7 @@ function showAvailabilityChart(type) {
             return;
         }
         const { sortedUnits, availability } = processAvailabilityData(filteredData);
+        console.log('Dados para gráfico:', { sortedUnits, availability });
         if (!availability || availability.length === 0) {
             document.getElementById('analysisError').textContent = 'Nenhum dado de disponibilidade disponível.';
             return;

@@ -1,7 +1,12 @@
 [build]
-  command = ""
-  publish = "public"
+  command = "npm install --prefix netlify/functions"
   functions = "netlify/functions"
+  publish = "."
 
-[functions]
-  node_bundler = "esbuild"
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[context.production.environment]
+  MONGODB_URI = "mongodb+srv://banco-db:a315saex@cluster0.wgokngs.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
