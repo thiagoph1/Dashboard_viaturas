@@ -20,25 +20,65 @@ exports.handler = async (event, context) => {
         const db = client.db('dashboard');
         const collection = db.collection('daily_data');
 
-        console.log('Agregando totais por semana...');
+        console.log('Agregando totais por semana do mês...');
         const weeklyTotals = await collection.aggregate([
             {
-                $group: {
-                    _id: {
-                        $dateToString: {
-                            format: "%Y-%U",
-                            date: { $dateFromString: { dateString: "$date" } }
-                        }
-                    },
-                    totalViaturas: { $sum: "$totalRecords" }
+                $addFields: {
+                    dateObj: { $dateFromString: { dateString: "$date" } }
                 }
             },
             {
-                $sort: { _id: -1 }
+                $addFields: {
+                    year: { $year: "$dateObj" },
+                    month: { $month: "$dateObj" },
+                    dayOfMonth: { $dayOfMonth: "$dateObj" },
+                    weekOfMonth: {
+                        $ceil: {
+                            $divide: [
+                                "$dayOfMonth",
+                                7
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        year: "$year",
+                        month: "$month",
+                        weekOfMonth: "$weekOfMonth"
+                    },
+                    totalViaturas: { $sum: "$totalRecords" },
+                    minDate: { $min: "$dateObj" }
+                }
+            },
+            {
+                $sort: { "minDate": -1 }
             },
             {
                 $project: {
-                    week: "$_id",
+                    week: "$_id.weekOfMonth",
+                    month: {
+                        $switch: {
+                            branches: [
+                                { case: { $eq: ["$_id.month", 1] }, then: "Janeiro" },
+                                { case: { $eq: ["$_id.month", 2] }, then: "Fevereiro" },
+                                { case: { $eq: ["$_id.month", 3] }, then: "Março" },
+                                { case: { $eq: ["$_id.month", 4] }, then: "Abril" },
+                                { case: { $eq: ["$_id.month", 5] }, then: "Maio" },
+                                { case: { $eq: ["$_id.month", 6] }, then: "Junho" },
+                                { case: { $eq: ["$_id.month", 7] }, then: "Julho" },
+                                { case: { $eq: ["$_id.month", 8] }, then: "Agosto" },
+                                { case: { $eq: ["$_id.month", 9] }, then: "Setembro" },
+                                { case: { $eq: ["$_id.month", 10] }, then: "Outubro" },
+                                { case: { $eq: ["$_id.month", 11] }, then: "Novembro" },
+                                { case: { $eq: ["$_id.month", 12] }, then: "Dezembro" }
+                            ],
+                            default: "Desconhecido"
+                        }
+                    },
+                    year: "$_id.year",
                     totalViaturas: 1,
                     _id: 0
                 }

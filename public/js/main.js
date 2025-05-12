@@ -84,10 +84,10 @@ async function loadWeeklyTotals() {
             document.getElementById('initialError').textContent = 'Nenhum dado semanal encontrado no banco de dados.';
         } else {
             weeklyTotals.forEach(item => {
-                console.log('Adicionando semana:', item.week);
+                console.log('Adicionando semana:', item);
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${item.week}</td>
+                    <td>Semana ${item.week}/${item.month}/${item.year}</td>
                     <td>${item.totalViaturas}</td>
                 `;
                 tableBody.appendChild(row);

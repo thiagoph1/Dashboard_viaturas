@@ -3,5 +3,8 @@
     "chart.js": "^4.4.9",
     "dotenv": "^16.5.0",
     "mongodb": "^6.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.17"
   }
 }
