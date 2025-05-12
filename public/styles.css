@@ -1,175 +1,77 @@
 body {
     font-family: Arial, sans-serif;
-    margin: 20px;
+    margin: 0;
+    padding: 20px;
     background-color: #f4f4f4;
 }
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-}
-h1, h2 {
-    text-align: center;
-    color: #333;
-}
-h3 {
-    color: #333;
-    margin-bottom: 10px;
-    font-size: 1.2em;
-}
+
 .screen {
     display: none;
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    max-width: 800px;
+    margin: 0 auto;
 }
+
 .screen.active {
     display: block;
 }
-.upload-section, .initial-controls {
-    margin-bottom: 20px;
-    text-align: center;
+
+h1, h2 {
+    color: #333;
 }
-.initial-controls select {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    margin: 10px;
-    font-size: 1em;
-    min-width: 200px;
-}
-#fileInput, #importHistoryInput {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    margin-right: 10px;
-}
+
 button {
     padding: 10px 20px;
-    background-color: #4CAF50;
+    margin: 5px;
+    background-color: #007BFF;
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 5px;
     cursor: pointer;
-    margin: 10px;
 }
+
 button:hover {
-    background-color: #45a049;
+    background-color: #0056b3;
 }
-.summary {
-    margin-bottom: 20px;
-    text-align: center;
+
+.error {
+    color: red;
+    font-weight: bold;
 }
-.summary p {
-    font-size: 1.2em;
-    color: #555;
+
+canvas {
+    max-width: 100%;
 }
-.button-section {
-    text-align: center;
-    margin-bottom: 20px;
-}
-.button-section button {
-    margin: 0 10px;
-}
-.chart-container {
-    margin-top: 20px;
-    max-width: 1000px;
-    margin-left: auto;
-    margin-right: auto;
-    display: none;
-}
-.table-container {
-    margin-top: 20px;
-    max-width: 1000px;
-    margin-left: auto;
-    margin-right: auto;
-    display: none;
-    text-align: center;
-}
-.chart-container.active, .table-container.active {
-    display: block;
-}
+
 table {
     width: 100%;
     border-collapse: collapse;
-    background: #fff;
-    border-radius: 4px;
-    box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    margin-bottom: 20px;
+    margin: 20px 0;
 }
+
 th, td {
     padding: 10px;
+    border: 1px solid #ddd;
     text-align: left;
-    border: 1px solid #ccc;
 }
+
 th {
-    background-color: #f0f0f0;
-    font-weight: bold;
+    background-color: #007BFF;
+    color: white;
     cursor: pointer;
 }
+
 th:hover {
-    background-color: #e0e0e0;
+    background-color: #0056b3;
 }
-th .sort-indicator {
-    margin-left: 5px;
-    font-size: 0.8em;
-}
-.error-message {
-    color: red;
-    text-align: center;
-    margin-top: 20px;
-}
-#availabilityTable, #availabilityChart {
-    display: none;
-}
-#availabilityTable.active, #availabilityChart.active {
+
+.viatura-image {
     display: block;
-}
-.unit-filter-columns {
-    display: flex;
-    justify-content: center;
-    gap: 40px;
-    max-width: 1000px;
+    max-width: 600px;
+    height: auto;
     margin: 20px auto;
-}
-.unit-filter-column {
-    flex: 1;
-    min-width: 300px;
-}
-.unit-filter-list {
-    text-align: left;
-}
-.unit-filter-list label {
-    display: block;
-    margin: 10px 0;
-    font-size: 1.1em;
-}
-.unit-filter-list input[type="checkbox"] {
-    margin-right: 10px;
-}
-.history-controls {
-    text-align: center;
-    margin-bottom: 20px;
-}
-.history-controls select {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    margin: 10px;
-    font-size: 1em;
-}
-#importHistoryInput {
-    display: none;
-}
-@media (max-width: 768px) {
-    .unit-filter-columns {
-        flex-direction: column;
-        gap: 20px;
-    }
-    .unit-filter-column {
-        min-width: 100%;
-    }
-    .chart-container, .table-container, .unit-filter-columns {
-        max-width: 90%;
-    }
+    border-radius: 5px;
 }

@@ -53,58 +53,59 @@ document.addEventListener('DOMContentLoaded', async () => {
         Chart.register(ChartDataLabels);
     }
 
-    // Carregar datas disponíveis
-    await loadAvailableDates();
+    // Carregar totais semanais
+    await loadWeeklyTotals();
 });
 
-async function loadAvailableDates() {
-    console.log('Carregando datas disponíveis...');
-    const dateSelect = document.getElementById('dateSelect');
-    if (!dateSelect) {
-        console.error('Elemento #dateSelect não encontrado');
-        document.getElementById('initialError').textContent = 'Erro: Elemento de seleção de datas não encontrado.';
+async function loadWeeklyTotals() {
+    console.log('Carregando totais semanais...');
+    const tableBody = document.getElementById('weeklyTotalsTableBody');
+    if (!tableBody) {
+        console.error('Elemento #weeklyTotalsTableBody não encontrado');
+        document.getElementById('initialError').textContent = 'Erro: Elemento da tabela de totais não encontrado.';
         return;
     }
 
     try {
-        console.log('Fazendo requisição para /.netlify/functions/get-dates');
-        const response = await fetch('/.netlify/functions/get-dates');
+        console.log('Fazendo requisição para /.netlify/functions/get-weekly-totals');
+        const response = await fetch('/.netlify/functions/get-weekly-totals');
         console.log('Resposta recebida:', response.status, response.statusText);
         if (!response.ok) {
             const errorBody = await response.text();
             console.error('Corpo do erro:', errorBody);
-            throw new Error(`Erro ao buscar datas: ${response.status} ${response.statusText}`);
+            throw new Error(`Erro ao buscar totais semanais: ${response.status} ${response.statusText}`);
         }
-        const dates = await response.json();
-        console.log('Datas recebidas:', dates);
+        const weeklyTotals = await response.json();
+        console.log('Totais semanais recebidos:', weeklyTotals);
 
-        dateSelect.innerHTML = '<option value="">Selecione uma data</option>';
-        if (dates.length === 0) {
-            console.warn('Nenhuma data disponível');
-            document.getElementById('initialError').textContent = 'Nenhuma data encontrada no banco de dados.';
+        tableBody.innerHTML = '';
+        if (weeklyTotals.length === 0) {
+            console.warn('Nenhum total semanal disponível');
+            document.getElementById('initialError').textContent = 'Nenhum dado semanal encontrado no banco de dados.';
         } else {
-            dates.forEach(date => {
-                console.log('Adicionando data:', date);
-                const option = document.createElement('option');
-                option.value = date;
-                option.textContent = date;
-                dateSelect.appendChild(option);
+            weeklyTotals.forEach(item => {
+                console.log('Adicionando semana:', item.week);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.week}</td>
+                    <td>${item.totalViaturas}</td>
+                `;
+                tableBody.appendChild(row);
             });
             document.getElementById('initialError').textContent = '';
         }
     } catch (error) {
-        console.error('Erro em loadAvailableDates:', error);
-        document.getElementById('initialError').textContent = `Erro ao carregar datas: ${error.message}`;
+        console.error('Erro em loadWeeklyTotals:', error);
+        document.getElementById('initialError').textContent = `Erro ao carregar totais semanais: ${error.message}`;
     }
 }
 
-// ... (o restante do main.js permanece inalterado, incluindo loadDataByDate, convertToPlanilhaData, etc.)
 async function loadDataByDate() {
     console.log('Carregando dados por data...');
-    const dateSelect = document.getElementById('dateSelect');
+    const dateSelect = document.getElementById('historyDateSelect');
     const selectedDate = dateSelect.value;
     if (!selectedDate) {
-        document.getElementById('initialError').textContent = 'Selecione uma data.';
+        document.getElementById('historyError').textContent = 'Selecione uma data.';
         return;
     }
 
@@ -131,7 +132,7 @@ async function loadDataByDate() {
         showAnalysisScreen();
     } catch (error) {
         console.error('Erro em loadDataByDate:', error);
-        document.getElementById('initialError').textContent = 'Erro ao carregar dados da data selecionada.';
+        document.getElementById('historyError').textContent = 'Erro ao carregar dados da data selecionada.';
     }
 }
 
@@ -165,7 +166,7 @@ function showUploadScreen() {
 function goBackToInitial() {
     console.log('Voltando para initialScreen...');
     showScreen('initialScreen');
-    loadAvailableDates();
+    loadWeeklyTotals();
 }
 
 function processFile() {
@@ -317,13 +318,11 @@ async function skipUnitFilter() {
 async function saveDataToServer() {
     console.log('Iniciando saveDataToServer...');
     try {
-        // Processar dados
         const unitData = processUnitData(planilhaData);
         const availabilityData = processAvailabilityData(planilhaData);
         console.log('unitData:', unitData);
         console.log('availabilityData:', availabilityData);
 
-        // Validar dados processados
         if (!unitData || typeof unitData.totalRecords !== 'number' || !unitData.unitCount) {
             throw new Error('Dados de unitData inválidos: ' + JSON.stringify(unitData));
         }
@@ -340,7 +339,6 @@ async function saveDataToServer() {
         };
         console.log('dataToSave:', dataToSave);
 
-        // Verificar duplicatas
         const responseCheck = await fetch('/.netlify/functions/get-data-by-date', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -391,13 +389,11 @@ function showAnalysisScreen() {
             document.getElementById('analysisError').textContent = 'Erro: Elemento de resumo não encontrado.';
         }
 
-        // Limpar contêineres de gráficos e tabela
         document.getElementById('unitChartContainer').style.display = 'none';
         document.getElementById('statusChartContainer').style.display = 'none';
         document.getElementById('availabilityTableContainer').style.display = 'none';
         document.getElementById('analysisError').textContent = '';
 
-        // Destruir instâncias de gráficos, se existirem
         if (unitChartInstance) {
             unitChartInstance.destroy();
             unitChartInstance = null;
@@ -651,7 +647,7 @@ function goBack() {
     console.log('Voltando...');
     if (historicalData) {
         showScreen('initialScreen');
-        loadAvailableDates();
+        loadWeeklyTotals();
     } else {
         showScreen('filterScreen');
     }
