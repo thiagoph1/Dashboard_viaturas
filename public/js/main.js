@@ -38,6 +38,7 @@ window.deleteDuplicates = deleteDuplicates;
 window.loadDataByDate = loadDataByDate;
 window.showUploadScreen = showUploadScreen;
 window.goBackToInitial = goBackToInitial;
+window.loadDataByWeek = loadDataByWeek;
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
@@ -86,10 +87,13 @@ async function loadWeeklyTotals() {
             weeklyTotals.forEach(item => {
                 console.log('Adicionando semana:', item);
                 const row = document.createElement('tr');
+                row.style.cursor = 'pointer';
+                row.setAttribute('data-dates', JSON.stringify(item.dates));
                 row.innerHTML = `
                     <td>Semana ${item.week}/${item.month}/${item.year}</td>
                     <td>${item.totalViaturas}</td>
                 `;
+                row.addEventListener('click', () => loadDataByWeek(item.dates));
                 tableBody.appendChild(row);
             });
             document.getElementById('initialError').textContent = '';
@@ -97,6 +101,38 @@ async function loadWeeklyTotals() {
     } catch (error) {
         console.error('Erro em loadWeeklyTotals:', error);
         document.getElementById('initialError').textContent = `Erro ao carregar totais semanais: ${error.message}`;
+    }
+}
+
+async function loadDataByWeek(dates) {
+    console.log('Carregando dados por semana para datas:', dates);
+    try {
+        const response = await fetch('/.netlify/functions/get-data-by-week', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dates })
+        });
+        console.log('Resposta recebida:', response.status, response.statusText);
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error('Corpo do erro:', errorBody);
+            throw new Error(`Erro ao buscar dados da semana: ${response.status} ${response.statusText}`);
+        }
+        const data = await response.json();
+        console.log('Dados recebidos:', data);
+
+        if (!data || !data.unitCount || !data.availability) {
+            throw new Error('Dados inválidos recebidos');
+        }
+
+        historicalData = data;
+        planilhaData = convertToPlanilhaData(data);
+        console.log('planilhaData convertido:', planilhaData);
+
+        showAnalysisScreen();
+    } catch (error) {
+        console.error('Erro em loadDataByWeek:', error);
+        document.getElementById('initialError').textContent = `Erro ao carregar dados da semana: ${error.message}`;
     }
 }
 
@@ -655,7 +691,8 @@ function goBack() {
 
 function goBackFromHistory() {
     console.log('Voltando de historyScreen...');
-    showScreen('analysisScreen');
+    showScreen('initialScreen');
+    loadWeeklyTotals();
 }
 
 function showScreen(screenId) {

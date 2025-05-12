@@ -23,8 +23,23 @@ exports.handler = async (event, context) => {
         console.log('Agregando totais por semana do mês...');
         const weeklyTotals = await collection.aggregate([
             {
+                $match: {
+                    date: { $exists: true, $type: "string", $regex: "^\\d{4}-\\d{2}-\\d{2}$" }
+                }
+            },
+            {
                 $addFields: {
-                    dateObj: { $dateFromString: { dateString: "$date" } }
+                    dateObj: {
+                        $dateFromString: {
+                            dateString: "$date",
+                            onError: null
+                        }
+                    }
+                }
+            },
+            {
+                $match: {
+                    dateObj: { $ne: null }
                 }
             },
             {
@@ -50,11 +65,12 @@ exports.handler = async (event, context) => {
                         weekOfMonth: "$weekOfMonth"
                     },
                     totalViaturas: { $sum: "$totalRecords" },
+                    dates: { $push: "$date" },
                     minDate: { $min: "$dateObj" }
                 }
             },
             {
-                $sort: { "minDate": -1 }
+                $sort: { minDate: -1 }
             },
             {
                 $project: {
@@ -80,6 +96,7 @@ exports.handler = async (event, context) => {
                     },
                     year: "$_id.year",
                     totalViaturas: 1,
+                    dates: 1,
                     _id: 0
                 }
             }
