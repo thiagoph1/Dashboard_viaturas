@@ -1,7 +1,7 @@
 const { MongoClient } = require('mongodb');
 
 exports.handler = async (event, context) => {
-    console.log('Função get-weekly-totals invocada');
+    console.log('Função get-daily-totals invocada');
     try {
         const uri = process.env.MONGODB_URI;
         if (!uri) {
@@ -20,8 +20,8 @@ exports.handler = async (event, context) => {
         const db = client.db('dashboard');
         const collection = db.collection('daily_data');
 
-        console.log('Agregando totais por semana do mês...');
-        const weeklyTotals = await collection.aggregate([
+        console.log('Buscando totais por dia...');
+        const dailyTotals = await collection.aggregate([
             {
                 $match: {
                     date: { $exists: true, $type: "string" }
@@ -47,47 +47,31 @@ exports.handler = async (event, context) => {
             {
                 $addFields: {
                     year: { $year: "$dateObj" },
-                    month: { $month: "$dateObj" },
-                    dayOfMonth: { $dayOfMonth: "$dateObj" },
-                    weekOfMonth: {
-                        $ceil: {
-                            $divide: [
-                                { $dayOfMonth: "$dateObj" },
-                                7
-                            ]
-                        }
-                    }
-                }
-            },
-            {
-                $addFields: {
-                    debug: {
-                        dateRaw: "$dateRaw",
-                        dateObj: "$dateObj",
-                        dayOfMonth: "$dayOfMonth",
-                        weekOfMonth: "$weekOfMonth"
-                    }
+                    month: { $month: "$dateObj" }
                 }
             },
             {
                 $group: {
                     _id: {
+                        date: "$date",
                         year: "$year",
-                        month: "$month",
-                        weekOfMonth: "$weekOfMonth"
+                        month: "$month"
                     },
                     totalViaturas: { $sum: "$totalRecords" },
-                    dates: { $push: "$date" },
-                    minDate: { $min: "$dateObj" },
-                    debug: { $first: "$debug" }
+                    debug: {
+                        $first: {
+                            dateRaw: "$dateRaw",
+                            dateObj: "$dateObj"
+                        }
+                    }
                 }
             },
             {
-                $sort: { minDate: -1 }
+                $sort: { "_id.date": -1 }
             },
             {
                 $project: {
-                    week: "$_id.weekOfMonth",
+                    date: "$_id.date",
                     month: {
                         $switch: {
                             branches: [
@@ -109,26 +93,25 @@ exports.handler = async (event, context) => {
                     },
                     year: "$_id.year",
                     totalViaturas: 1,
-                    dates: 1,
                     debug: 1,
                     _id: 0
                 }
             }
         ]).toArray();
 
-        console.log('Totais semanais:', JSON.stringify(weeklyTotals, null, 2));
+        console.log('Totais diários:', JSON.stringify(dailyTotals, null, 2));
         await client.close();
         console.log('Conexão com MongoDB fechada');
 
         return {
             statusCode: 200,
-            body: JSON.stringify(weeklyTotals)
+            body: JSON.stringify(dailyTotals)
         };
     } catch (error) {
-        console.error('Erro em get-weekly-totals:', error);
+        console.error('Erro em get-daily-totals:', error);
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: 'Erro ao buscar totais semanais', details: error.message })
+            body: JSON.stringify({ error: 'Erro ao buscar totais diários', details: error.message })
         };
     }
 };

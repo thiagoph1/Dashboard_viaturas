@@ -36,7 +36,7 @@ window.deleteDuplicates = deleteDuplicates;
 window.loadDataByDate = loadDataByDate;
 window.showUploadScreen = showUploadScreen;
 window.goBackToInitial = goBackToInitial;
-window.loadDataByWeek = loadDataByWeek;
+window.loadDataByDateFromTable = loadDataByDateFromTable;
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
@@ -52,69 +52,69 @@ document.addEventListener('DOMContentLoaded', async () => {
         Chart.register(ChartDataLabels);
     }
 
-    // Carregar totais semanais
-    await loadWeeklyTotals();
+    // Carregar totais diários
+    await loadDailyTotals();
 });
 
-async function loadWeeklyTotals() {
-    console.log('Carregando totais semanais...');
-    const tableBody = document.getElementById('weeklyTotalsTableBody');
+async function loadDailyTotals() {
+    console.log('Carregando totais diários...');
+    const tableBody = document.getElementById('dailyTotalsTableBody');
     if (!tableBody) {
-        console.error('Elemento #weeklyTotalsTableBody não encontrado');
+        console.error('Elemento #dailyTotalsTableBody não encontrado');
         document.getElementById('initialError').textContent = 'Erro: Elemento da tabela de totais não encontrado.';
         return;
     }
 
     try {
-        console.log('Fazendo requisição para /.netlify/functions/get-weekly-totals');
-        const response = await fetch('/.netlify/functions/get-weekly-totals');
+        console.log('Fazendo requisição para /.netlify/functions/get-daily-totals');
+        const response = await fetch('/.netlify/functions/get-daily-totals');
         console.log('Resposta recebida:', response.status, response.statusText);
         if (!response.ok) {
             const errorBody = await response.text();
             console.error('Corpo do erro:', errorBody);
-            throw new Error(`Erro ao buscar totais semanais: ${response.status} ${response.statusText}`);
+            throw new Error(`Erro ao buscar totais diários: ${response.status} ${response.statusText}`);
         }
-        const weeklyTotals = await response.json();
-        console.log('Totais semanais recebidos:', weeklyTotals);
+        const dailyTotals = await response.json();
+        console.log('Totais diários recebidos:', dailyTotals);
 
         tableBody.innerHTML = '';
-        if (weeklyTotals.length === 0) {
-            console.warn('Nenhum total semanal disponível');
-            document.getElementById('initialError').textContent = 'Nenhum dado semanal encontrado no banco de dados.';
+        if (dailyTotals.length === 0) {
+            console.warn('Nenhum total diário disponível');
+            document.getElementById('initialError').textContent = 'Nenhum dado diário encontrado no banco de dados.';
         } else {
-            weeklyTotals.forEach(item => {
-                console.log('Adicionando semana:', item);
+            dailyTotals.forEach(item => {
+                console.log('Adicionando dia:', item);
                 const row = document.createElement('tr');
                 row.style.cursor = 'pointer';
-                row.setAttribute('data-dates', JSON.stringify(item.dates));
+                row.setAttribute('data-date', item.date);
                 row.innerHTML = `
-                    <td>Semana ${item.week}/${item.month}/${item.year}</td>
+                    <td>${item.date} (${item.month}/${item.year})</td>
                     <td>${item.totalViaturas}</td>
                 `;
-                row.addEventListener('click', () => loadDataByWeek(item.dates));
+                row.addEventListener('click', () => loadDataByDateFromTable(item.date));
                 tableBody.appendChild(row);
             });
             document.getElementById('initialError').textContent = '';
         }
     } catch (error) {
-        console.error('Erro em loadWeeklyTotals:', error);
-        document.getElementById('initialError').textContent = `Erro ao carregar totais semanais: ${error.message}`;
+        console.error('Erro em loadDailyTotals:', error);
+        document.getElementById('initialError').textContent = `Erro ao carregar totais diários: ${error.message}`;
     }
 }
 
-async function loadDataByWeek(dates) {
-    console.log('Carregando dados por semana para datas:', dates);
+async function loadDataByDateFromTable(date) {
+    console.log('Carregando dados para data:', date);
     try {
-        const response = await fetch('/.netlify/functions/get-data-by-week', {
+        const response = await fetch('/.netlify/functions/get-data-by-date', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dates })
+            body: JSON.stringify({ date })
         });
         console.log('Resposta recebida:', response.status, response.statusText);
         if (!response.ok) {
             const errorBody = await response.text();
             console.error('Corpo do erro:', errorBody);
-            throw new Error(`Erro ao buscar dados da semana: ${response.status} ${response.statusText}`);
+            throw new Error(`Erro ao buscar dados da data: ${response.status} ${response.statusText}`);
         }
         const data = await response.json();
         console.log('Dados recebidos:', data);
@@ -129,8 +129,8 @@ async function loadDataByWeek(dates) {
 
         showAnalysisScreen();
     } catch (error) {
-        console.error('Erro em loadDataByWeek:', error);
-        document.getElementById('initialError').textContent = `Erro ao carregar dados da semana: ${error.message}`;
+        console.error('Erro em loadDataByDateFromTable:', error);
+        document.getElementById('initialError').textContent = `Erro ao carregar dados da data: ${error.message}`;
     }
 }
 
@@ -212,7 +212,7 @@ function showUploadScreen() {
 function goBackToInitial() {
     console.log('Voltando para initialScreen...');
     showScreen('initialScreen');
-    loadWeeklyTotals();
+    loadDailyTotals();
 }
 
 async function processFile() {
@@ -612,13 +612,13 @@ function importHistory() {
 function goBack() {
     console.log('Voltando...');
     showScreen('initialScreen');
-    loadWeeklyTotals();
+    loadDailyTotals();
 }
 
 function goBackFromHistory() {
     console.log('Voltando de historyScreen...');
     showScreen('initialScreen');
-    loadWeeklyTotals();
+    loadDailyTotals();
 }
 
 function showScreen(screenId) {
