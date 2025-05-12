@@ -1,12 +1,18 @@
 [build]
+  # Comando para instalar dependências das funções
   command = "npm install --prefix netlify/functions"
+  # Diretório das Netlify Functions
   functions = "netlify/functions"
+  # Diretório de publicação do frontend
   publish = "."
 
 [[redirects]]
+  # Redireciona todas as rotas para index.html (SPA)
   from = "/*"
   to = "/index.html"
   status = 200
 
+# Variáveis de ambiente para produção
 [context.production.environment]
-  MONGODB_URI = "mongodb+srv://banco-db:a315saex@cluster0.wgokngs.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+  # Placeholder para MONGODB_URI (definir no painel do Netlify)
+  MONGODB_URI = ""
