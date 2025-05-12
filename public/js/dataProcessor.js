@@ -60,7 +60,11 @@ function processAvailabilityData(data) {
     let hasUnitColumn = false;
     let hasStatusColumn = false;
 
-    data.forEach(row => {
+    // Valores considerados como "Disponível" e "Indisponível"
+    const availableStatuses = ['em uso', 'ativo', 'disponível', 'estoque interno', 'em trânsito'];
+    const unavailableStatuses = ['em reparo', 'a alienar', 'inativo', 'a reparar'];
+
+    data.forEach((row, index) => {
         const unitKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'unidade');
         const statusKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'statuspatrimonio');
 
@@ -73,10 +77,13 @@ function processAvailabilityData(data) {
         if (unit) {
             unitCount[unit] = (unitCount[unit] || 0) + 1;
             availability[unit] = availability[unit] || { available: 0, unavailable: 0 };
-            if (status === 'em uso') {
+
+            if (availableStatuses.includes(status)) {
                 availability[unit].available += 1;
-            } else if (status === 'inativo') {
+            } else if (unavailableStatuses.includes(status)) {
                 availability[unit].unavailable += 1;
+            } else {
+                console.warn(`Status desconhecido na linha ${index + 1}: "${status}"`);
             }
         }
     });
@@ -88,6 +95,14 @@ function processAvailabilityData(data) {
         unavailable: availability[unit]?.unavailable || 0,
         total: (availability[unit]?.available || 0) + (availability[unit]?.unavailable || 0)
     }));
+
+    // Logs para depuração
+    console.log('sortedUnits:', sortedUnits);
+    console.log('availability:', availabilityArray);
+    console.log('Valores únicos de StatusPatrimonio:', [...new Set(data.map(row => {
+        const statusKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'statuspatrimonio');
+        return statusKey && row[statusKey] !== undefined ? String(row[statusKey]).trim() : '';
+    }))]);
 
     let errorMessage = '';
     if (!hasUnitColumn) errorMessage = 'Coluna "Unidade" não encontrada na planilha.';
