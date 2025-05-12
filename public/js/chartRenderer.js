@@ -86,12 +86,14 @@ function renderAvailabilityChart(canvasId, sortedUnits, availability) {
                 {
                     label: 'Disponíveis',
                     data: availability.map(item => item.available),
-                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.8)', // Verde mais opaco
+                    stack: 'Stack0' // Empilhar no mesmo grupo
                 },
                 {
                     label: 'Indisponíveis',
                     data: availability.map(item => item.unavailable),
-                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.8)', // Vermelho mais opaco
+                    stack: 'Stack0' // Empilhar no mesmo grupo
                 }
             ]
         },
@@ -99,22 +101,31 @@ function renderAvailabilityChart(canvasId, sortedUnits, availability) {
             maintainAspectRatio: false,
             plugins: {
                 datalabels: {
-                    anchor: 'end',
-                    align: 'top',
-                    formatter: Math.round
+                    anchor: 'center', // Posicionar rótulos no centro de cada segmento
+                    align: 'center',
+                    formatter: (value, context) => {
+                        // Mostrar apenas valores não nulos
+                        return value > 0 ? value : '';
+                    },
+                    color: '#fff', // Texto branco para contraste
+                    font: {
+                        weight: 'bold'
+                    }
                 }
             },
             scales: {
                 x: {
+                    stacked: true, // Empilhar barras no eixo X
                     ticks: {
                         font: {
-                            size: 12 // Aumentar tamanho da fonte dos rótulos
+                            size: 12
                         },
-                        maxRotation: 45, // Rotacionar rótulos para melhor legibilidade
+                        maxRotation: 45,
                         minRotation: 45
                     }
                 },
                 y: {
+                    stacked: true, // Empilhar valores no eixo Y
                     beginAtZero: true
                 }
             }
