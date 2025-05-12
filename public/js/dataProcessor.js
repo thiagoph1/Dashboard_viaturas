@@ -1,101 +1,97 @@
-export function processUnitData(data) {
-       const unitCount = {};
-       let totalRecords = 0;
-       let hasUnitColumn = false;
+function processUnitData(data) {
+    console.log('Processando dados de unidades...');
+    if (!data || !Array.isArray(data)) {
+        console.error('Dados inválidos em processUnitData');
+        return { totalRecords: 0, unitCount: {}, sortedUnits: [] };
+    }
 
-       data.forEach(row => {
-           const unitKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'unidade');
-           if (unitKey && row[unitKey] !== undefined && row[unitKey] !== null) {
-               hasUnitColumn = true;
-               const unit = String(row[unitKey]).trim();
-               if (unit) {
-                   unitCount[unit] = (unitCount[unit] || 0) + 1;
-                   totalRecords++;
-               }
-           }
-       });
+    const unitCount = {};
+    data.forEach(row => {
+        const unitKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'unidade');
+        const unit = unitKey && row[unitKey] !== undefined ? String(row[unitKey]).trim() : '';
+        if (unit) {
+            unitCount[unit] = (unitCount[unit] || 0) + 1;
+        }
+    });
 
-       const sortedUnits = Object.keys(unitCount).sort();
+    const sortedUnits = Object.keys(unitCount).sort();
+    const totalRecords = data.length;
 
-       return { unitCount, totalRecords: Number(totalRecords), hasUnitColumn, sortedUnits };
-   }
+    return { totalRecords, unitCount, sortedUnits };
+}
 
-   export function processStatusData(data) {
-       const statusCount = {};
-       let totalValidStatus = 0;
-       let hasStatusColumn = false;
+function processStatusData(data) {
+    console.log('Processando dados de status...');
+    if (!data || !Array.isArray(data)) {
+        console.error('Dados inválidos em processStatusData');
+        return { statusCount: {}, sortedStatuses: [] };
+    }
 
-       data.forEach(row => {
-           const statusKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'statuspatrimonio');
-           if (statusKey && row[statusKey] !== undefined && row[statusKey] !== null) {
-               hasStatusColumn = true;
-               const status = String(row[statusKey]).trim();
-               if (status) {
-                   statusCount[status] = (statusCount[status] || 0) + 1;
-                   totalValidStatus++;
-               }
-           }
-       });
+    const statusCount = {};
+    data.forEach(row => {
+        const statusKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'statuspatrimonio');
+        const status = statusKey && row[statusKey] !== undefined ? String(row[statusKey]).trim() : '';
+        if (status) {
+            statusCount[status] = (statusCount[status] || 0) + 1;
+        }
+    });
 
-       const sortedStatuses = Object.keys(statusCount).sort();
+    const sortedStatuses = Object.keys(statusCount).sort();
 
-       return { statusCount, hasStatusColumn, totalValidStatus, sortedStatuses };
-   }
+    return { statusCount, sortedStatuses };
+}
 
-   export function processAvailabilityData(data) {
-       const unitCount = {};
-       const availability = [];
-       let hasUnitColumn = false;
-       let hasStatusColumn = false;
-       let errorMessage = '';
+function processAvailabilityData(data) {
+    console.log('Processando dados de disponibilidade...');
+    if (!data || !Array.isArray(data)) {
+        console.error('Dados inválidos em processAvailabilityData');
+        return {
+            sortedUnits: [],
+            availability: [],
+            hasUnitColumn: false,
+            hasStatusColumn: false,
+            errorMessage: 'Dados inválidos'
+        };
+    }
 
-       data.forEach(row => {
-           const unitKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'unidade');
-           const statusKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'statuspatrimonio');
+    const unitCount = {};
+    const availability = {};
 
-           if (unitKey && row[unitKey] !== undefined && row[unitKey] !== null) {
-               hasUnitColumn = true;
-               const unit = String(row[unitKey]).trim();
-               if (unit) {
-                   unitCount[unit] = (unitCount[unit] || 0) + 1;
-               }
-           }
+    let hasUnitColumn = false;
+    let hasStatusColumn = false;
 
-           if (statusKey && row[statusKey] !== undefined && row[statusKey] !== null) {
-               hasStatusColumn = true;
-           }
-       });
+    data.forEach(row => {
+        const unitKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'unidade');
+        const statusKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'statuspatrimonio');
 
-       if (!hasUnitColumn) {
-           errorMessage = 'Coluna "Unidade" não encontrada ou sem dados válidos.';
-       }
-       if (!hasStatusColumn) {
-           errorMessage = errorMessage ? errorMessage + ' Coluna "Status Patrimonio" não encontrada ou sem dados válidos.' : 'Coluna "Status Patrimonio" não encontrada ou sem dados válidos.';
-       }
+        if (unitKey) hasUnitColumn = true;
+        if (statusKey) hasStatusColumn = true;
 
-       const sortedUnits = Object.keys(unitCount).sort();
+        const unit = unitKey && row[unitKey] !== undefined ? String(row[unitKey]).trim() : '';
+        const status = statusKey && row[statusKey] !== undefined ? String(row[statusKey]).trim().toLowerCase() : '';
 
-       data.forEach(row => {
-           const unitKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'unidade');
-           const statusKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'statuspatrimonio');
-           const unit = unitKey && row[unitKey] ? String(row[unitKey]).trim() : '';
-           const status = statusKey && row[statusKey] ? String(row[statusKey]).trim().toLowerCase() : '';
+        if (unit) {
+            unitCount[unit] = (unitCount[unit] || 0) + 1;
+            availability[unit] = availability[unit] || { available: 0, unavailable: 0 };
+            if (status === 'em uso') {
+                availability[unit].available += 1;
+            } else if (status === 'inativo') {
+                availability[unit].unavailable += 1;
+            }
+        }
+    });
 
-           if (unit && status) {
-               let unitAvailability = availability.find(a => a.unit === unit);
-               if (!unitAvailability) {
-                   unitAvailability = { unit, available: 0, unavailable: 0, total: 0 };
-                   availability.push(unitAvailability);
-               }
+    const sortedUnits = Object.keys(unitCount).sort();
+    const availabilityArray = sortedUnits.map(unit => ({
+        unit,
+        available: availability[unit]?.available || 0,
+        unavailable: availability[unit]?.unavailable || 0,
+        total: (availability[unit]?.available || 0) + (availability[unit]?.unavailable || 0)
+    }));
 
-               if (['em uso', 'ativo'].includes(status)) {
-                   unitAvailability.available += 1;
-               } else if (['inativo', 'baixado'].includes(status)) {
-                   unitAvailability.unavailable += 1;
-               }
-               unitAvailability.total += 1;
-           }
-       });
+    let errorMessage = '';
+    if (!hasUnitColumn) errorMessage = 'Coluna "Unidade" não encontrada na planilha.';
+    if (!hasStatusColumn) errorMessage = errorMessage ? `${errorMessage} Coluna "StatusPatrimonio" não encontrada na planilha.` : 'Coluna "StatusPatrimonio" não encontrada na planilha.';
 
-       return { hasUnitColumn, hasStatusColumn, sortedUnits, availability, errorMessage };
-   }
+    return { sortedUnits, availability: availabilityArray, hasUnitColumn, hasStatusColumn, errorMessage };
+}

@@ -1,68 +1,61 @@
-export function renderAvailabilityTable(tableBodyId, sortedUnits, availability) {
-       console.log('Renderizando tabela de disponibilidade...');
-       console.log('sortedUnits:', sortedUnits);
-       console.log('availability:', availability);
+function renderAvailabilityTable(tableBodyId, sortedUnits, availability) {
+    console.log('Renderizando tabela de disponibilidade...');
+    const tableBody = document.getElementById(tableBodyId);
+    if (!tableBody) {
+        console.error('Elemento da tabela não encontrado:', tableBodyId);
+        return;
+    }
 
-       const tbody = document.getElementById(tableBodyId);
-       if (!tbody) {
-           console.error('Elemento tbody não encontrado:', tableBodyId);
-           throw new Error(`Elemento ${tableBodyId} não encontrado`);
-       }
+    tableBody.innerHTML = '';
+    availability.forEach(item => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${item.unit}</td>
+            <td>${item.available}</td>
+            <td>${item.unavailable}</td>
+            <td>${item.total}</td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
 
-       tbody.innerHTML = '';
+function sortAvailabilityTable(tableBodyId, column, currentSort) {
+    console.log('Ordenando tabela por:', column);
+    const tableBody = document.getElementById(tableBodyId);
+    if (!tableBody) {
+        console.error('Elemento da tabela não encontrado:', tableBodyId);
+        return currentSort;
+    }
 
-       sortedUnits.forEach(unit => {
-           const unitAvailability = availability.find(a => a.unit === unit) || {
-               unit,
-               available: 0,
-               unavailable: 0,
-               total: 0
-           };
-           const row = document.createElement('tr');
-           row.innerHTML = `
-               <td>${unit}</td>
-               <td>${unitAvailability.available}</td>
-               <td>${unitAvailability.unavailable}</td>
-           `;
-           tbody.appendChild(row);
-       });
+    const rows = Array.from(tableBody.getElementsByTagName('tr'));
+    const isAscending = currentSort.column === column && currentSort.direction === 'desc' ? 'asc' : 'desc';
 
-       console.log('Tabela renderizada com sucesso');
-   }
+    rows.sort((a, b) => {
+        let aValue, bValue;
+        switch (column) {
+            case 'unit':
+                aValue = a.cells[0].textContent;
+                bValue = b.cells[0].textContent;
+                return isAscending === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+            case 'available':
+                aValue = parseInt(a.cells[1].textContent);
+                bValue = parseInt(b.cells[1].textContent);
+                return isAscending === 'asc' ? aValue - bValue : bValue - aValue;
+            case 'unavailable':
+                aValue = parseInt(a.cells[2].textContent);
+                bValue = parseInt(b.cells[2].textContent);
+                return isAscending === 'asc' ? aValue - bValue : bValue - aValue;
+            case 'total':
+                aValue = parseInt(a.cells[3].textContent);
+                bValue = parseInt(a.cells[3].textContent);
+                return isAscending === 'asc' ? aValue - bValue : bValue - aValue;
+            default:
+                return 0;
+        }
+    });
 
-   export function sortAvailabilityTable(tableBodyId, column, currentSort) {
-       console.log(`Ordenando por ${column}...`);
-       const tbody = document.getElementById(tableBodyId);
-       if (!tbody) {
-           console.error('Elemento tbody não encontrado:', tableBodyId);
-           throw new Error(`Elemento ${tableBodyId} não encontrado`);
-       }
+    tableBody.innerHTML = '';
+    rows.forEach(row => tableBody.appendChild(row));
 
-       const rows = Array.from(tbody.querySelectorAll('tr'));
-       const direction = currentSort.column === column && currentSort.direction === 'asc' ? 'desc' : 'asc';
-
-       rows.sort((a, b) => {
-           const aText = a.cells[column === 'unit' ? 0 : column === 'available' ? 1 : 2].textContent;
-           const bText = b.cells[column === 'unit' ? 0 : column === 'available' ? 1 : 2].textContent;
-           if (column === 'unit') {
-               return direction === 'asc' ? aText.localeCompare(bText) : bText.localeCompare(aText);
-           }
-           const aValue = parseInt(aText) || 0;
-           const bValue = parseInt(bText) || 0;
-           return direction === 'asc' ? aValue - bValue : bValue - aValue;
-       });
-
-       tbody.innerHTML = '';
-       rows.forEach(row => tbody.appendChild(row));
-
-       document.querySelectorAll('.sort-indicator').forEach(indicator => {
-           indicator.textContent = '';
-       });
-       const indicator = document.getElementById(`sortIndicator${column.charAt(0).toUpperCase() + column.slice(1)}`);
-       if (indicator) {
-           indicator.textContent = direction === 'asc' ? '↑' : '↓';
-       }
-
-       console.log('Tabela ordenada com sucesso');
-       return { column, direction };
-   }
+    return { column, direction: isAscending };
+}

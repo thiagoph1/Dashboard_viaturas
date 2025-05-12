@@ -3,7 +3,7 @@ function renderUnitChart(canvasId, sortedUnits, unitCount) {
         console.error('Chart.js não carregado em renderUnitChart.');
         throw new Error('Chart.js não carregado.');
     }
-    if (typeof ChartDataLabels !== 'undefined') {
+    if (typeof ChartDataLabels !== 'undefined' && !Chart.registeredPlugins?.includes(ChartDataLabels)) {
         Chart.register(ChartDataLabels);
     }
     const ctx = document.getElementById(canvasId).getContext('2d');
@@ -39,7 +39,7 @@ function renderStatusChart(canvasId, sortedStatuses, statusCount) {
         console.error('Chart.js não carregado em renderStatusChart.');
         throw new Error('Chart.js não carregado.');
     }
-    if (typeof ChartDataLabels !== 'undefined') {
+    if (typeof ChartDataLabels !== 'undefined' && !Chart.registeredPlugins?.includes(ChartDataLabels)) {
         Chart.register(ChartDataLabels);
     }
     const ctx = document.getElementById(canvasId).getContext('2d');
@@ -74,7 +74,7 @@ function renderAvailabilityChart(canvasId, sortedUnits, availability) {
         console.error('Chart.js não carregado em renderAvailabilityChart.');
         throw new Error('Chart.js não carregado.');
     }
-    if (typeof ChartDataLabels !== 'undefined') {
+    if (typeof ChartDataLabels !== 'undefined' && !Chart.registeredPlugins?.includes(ChartDataLabels)) {
         Chart.register(ChartDataLabels);
     }
     const ctx = document.getElementById(canvasId).getContext('2d');
@@ -115,7 +115,7 @@ function renderHistoryChart(canvasId, history) {
         console.error('Chart.js não carregado em renderHistoryChart.');
         throw new Error('Chart.js não carregado.');
     }
-    if (typeof ChartDataLabels !== 'undefined') {
+    if (typeof ChartDataLabels !== 'undefined' && !Chart.registeredPlugins?.includes(ChartDataLabels)) {
         Chart.register(ChartDataLabels);
     }
     const ctx = document.getElementById(canvasId).getContext('2d');
