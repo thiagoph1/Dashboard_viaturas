@@ -12,8 +12,8 @@
 <body>
     <!-- Tela Inicial -->
     <div id="initialScreen" class="screen active">
-        <h1>Dashboard de Viaturas da Aeronáutica</h1>
-        <img src="https://via.placeholder.com/600x400?text=Viatura+Aeronáutica" alt="Viatura da Aeronáutica" class="viatura-image">
+        <h1>CONTROLE de Viaturas</h1>
+        <img src="https://www.forte.jor.br/wp-content/uploads/2012/09/foto-abre-grande-dentro.jpg" alt="Viatura da Aeronáutica" class="viatura-image">
         <h2>Histórico Semanal de Viaturas</h2>
         <table id="weeklyTotalsTable">
             <thead>
@@ -38,27 +38,17 @@
         <button onclick="goBackToInitial()">Voltar</button>
     </div>
 
-    <!-- Tela de Filtro -->
-    <div id="filterScreen" class="screen">
-        <h1>Filtrar Unidades</h1>
-        <h2>Unidades do SISTRAN</h2>
-        <div id="sistranUnitsList"></div>
-        <h2>Outras Unidades</h2>
-        <div id="otherUnitsList"></div>
-        <p id="filterError" class="error"></p>
-        <button onclick="applyUnitFilter()">Aplicar Filtro</button>
-        <button onclick="skipUnitFilter()">Prosseguir sem Filtrar</button>
-        <button onclick="goBackToInitial()">Voltar</button>
-    </div>
-
     <!-- Tela de Análise -->
     <div id="analysisScreen" class="screen">
         <h1>Análise de Viaturas</h1>
         <p>Total de Registros: <span id="totalRecords">0</span></p>
         <p id="analysisError" class="error"></p>
-        <button onclick="showUnitCountChart()">Gráfico por Unidade</button>
-        <button onclick="showStatusCountChart()">Gráfico por Status</button>
-        <button onclick="showAvailabilityTable()">Tabela de Disponibilidade</button>
+        <button onclick="showUnitCountChart('sistran')">Gráfico por Unidade (SISTRAN)</button>
+        <button onclick="showUnitCountChart('all')">Gráfico por Unidade (Todas)</button>
+        <button onclick="showStatusCountChart('sistran')">Gráfico por Status (SISTRAN)</button>
+        <button onclick="showStatusCountChart('all')">Gráfico por Status (Todas)</button>
+        <button onclick="showAvailabilityTable('sistran')">Tabela de Disponibilidade (SISTRAN)</button>
+        <button onclick="showAvailabilityTable('all')">Tabela de Disponibilidade (Todas)</button>
         <button onclick="showHistoryScreen()">Ver Histórico</button>
         <button onclick="goBack()">Voltar</button>
         <div id="unitChartContainer" style="display: none;">

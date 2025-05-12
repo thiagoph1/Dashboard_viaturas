@@ -24,14 +24,16 @@ exports.handler = async (event, context) => {
         const weeklyTotals = await collection.aggregate([
             {
                 $match: {
-                    date: { $exists: true, $type: "string", $regex: "^\\d{4}-\\d{2}-\\d{2}$" }
+                    date: { $exists: true, $type: "string" }
                 }
             },
             {
                 $addFields: {
+                    dateRaw: "$date",
                     dateObj: {
                         $dateFromString: {
                             dateString: "$date",
+                            format: "%Y-%m-%d",
                             onError: null
                         }
                     }
@@ -50,10 +52,20 @@ exports.handler = async (event, context) => {
                     weekOfMonth: {
                         $ceil: {
                             $divide: [
-                                "$dayOfMonth",
+                                { $dayOfMonth: "$dateObj" },
                                 7
                             ]
                         }
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    debug: {
+                        dateRaw: "$dateRaw",
+                        dateObj: "$dateObj",
+                        dayOfMonth: "$dayOfMonth",
+                        weekOfMonth: "$weekOfMonth"
                     }
                 }
             },
@@ -66,7 +78,8 @@ exports.handler = async (event, context) => {
                     },
                     totalViaturas: { $sum: "$totalRecords" },
                     dates: { $push: "$date" },
-                    minDate: { $min: "$dateObj" }
+                    minDate: { $min: "$dateObj" },
+                    debug: { $first: "$debug" }
                 }
             },
             {
@@ -97,12 +110,13 @@ exports.handler = async (event, context) => {
                     year: "$_id.year",
                     totalViaturas: 1,
                     dates: 1,
+                    debug: 1,
                     _id: 0
                 }
             }
         ]).toArray();
 
-        console.log('Totais semanais:', weeklyTotals);
+        console.log('Totais semanais:', JSON.stringify(weeklyTotals, null, 2));
         await client.close();
         console.log('Conexão com MongoDB fechada');
 

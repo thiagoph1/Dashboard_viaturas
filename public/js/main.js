@@ -10,7 +10,6 @@ let statusChartInstance = null;
 let availabilityChartInstance = null;
 let historyChartInstance = null;
 let currentSort = { column: 'total', direction: 'desc' };
-let availableUnits = [];
 const SISTRAN_UNITS = [
     'AFA', 'BAAN', 'BABV', 'BACG', 'BAFL', 'BAFZ', 'BANT', 'BAPV', 'BASC', 'BASM', 'BASV',
     'CISCEA', 'CLA', 'COMARA', 'CPBV-CC', 'CRCEA-SE', 'DACTA I', 'DACTA II', 'DACTA III',
@@ -20,8 +19,6 @@ const SISTRAN_UNITS = [
 
 // Expor funções globais
 window.processFile = processFile;
-window.applyUnitFilter = applyUnitFilter;
-window.skipUnitFilter = skipUnitFilter;
 window.goBack = goBack;
 window.goBackFromHistory = goBackFromHistory;
 window.showUnitCountChart = showUnitCountChart;
@@ -192,6 +189,18 @@ function convertToPlanilhaData(data) {
     return result;
 }
 
+function filterDataByUnits(data, type) {
+    console.log(`Filtrando dados para tipo: ${type}`);
+    if (type === 'sistran') {
+        return data.filter(row => {
+            const unitKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'unidade');
+            const unit = unitKey && row[unitKey] !== undefined ? String(row[unitKey]).trim() : '';
+            return SISTRAN_UNITS.includes(unit);
+        });
+    }
+    return data; // 'all' retorna todos os dados
+}
+
 function showUploadScreen() {
     console.log('Exibindo uploadScreen...');
     planilhaData = null;
@@ -205,7 +214,7 @@ function goBackToInitial() {
     loadWeeklyTotals();
 }
 
-function processFile() {
+async function processFile() {
     console.log('processFile chamado.');
     const fileInput = document.getElementById('fileInput');
     const file = fileInput.files[0];
@@ -217,7 +226,7 @@ function processFile() {
 
     console.log('Arquivo selecionado:', file.name);
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         try {
             console.log('Lendo arquivo Excel...');
             const data = new Uint8Array(e.target.result);
@@ -233,122 +242,14 @@ function processFile() {
             }
 
             console.log('Colunas encontradas:', Object.keys(planilhaData[0]));
-            showFilterScreen();
+            await saveDataToServer();
+            showAnalysisScreen();
         } catch (error) {
             console.error('Erro ao processar a planilha:', error);
             document.getElementById('uploadError').textContent = 'Erro ao processar a planilha.';
         }
     };
     reader.readAsArrayBuffer(file);
-}
-
-function showFilterScreen() {
-    console.log('Exibindo filterScreen...');
-    availableUnits = [];
-    const unitSet = new Set();
-    let hasUnitColumn = false;
-
-    planilhaData.forEach(row => {
-        const unitKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'unidade');
-        if (unitKey && row[unitKey] !== undefined && row[unitKey] !== null) {
-            hasUnitColumn = true;
-            const unit = String(row[unitKey]).trim();
-            if (unit) {
-                unitSet.add(unit);
-            }
-        }
-    });
-
-    availableUnits = [...unitSet];
-    console.log('Unidades disponíveis:', availableUnits);
-
-    const sistranUnits = availableUnits.filter(unit => SISTRAN_UNITS.includes(unit)).sort();
-    const otherUnits = availableUnits.filter(unit => !SISTRAN_UNITS.includes(unit)).sort();
-    console.log('Elos do SISTRAN:', sistranUnits);
-    console.log('Outros:', otherUnits);
-
-    const sistranList = document.getElementById('sistranUnitsList');
-    sistranList.innerHTML = '';
-    if (hasUnitColumn && sistranUnits.length > 0) {
-        sistranUnits.forEach(unit => {
-            const label = document.createElement('label');
-            label.innerHTML = `
-                <input type="checkbox" value="${unit}" class="unit-checkbox">
-                ${unit}
-            `;
-            sistranList.appendChild(label);
-        });
-    } else {
-        sistranList.innerHTML = '<p>Nenhuma unidade do SISTRAN encontrada.</p>';
-    }
-
-    const otherList = document.getElementById('otherUnitsList');
-    otherList.innerHTML = '';
-    if (hasUnitColumn && otherUnits.length > 0) {
-        otherUnits.forEach(unit => {
-            const label = document.createElement('label');
-            label.innerHTML = `
-                <input type="checkbox" value="${unit}" class="unit-checkbox">
-                ${unit}
-            `;
-            otherList.appendChild(label);
-        });
-    } else {
-        otherList.innerHTML = '<p>Nenhuma outra unidade encontrada.</p>';
-    }
-
-    if (!hasUnitColumn || availableUnits.length === 0) {
-        document.getElementById('filterError').textContent = 'Nenhuma unidade válida encontrada. Prosseguir sem filtrar?';
-    } else {
-        document.getElementById('filterError').textContent = '';
-    }
-
-    showScreen('filterScreen');
-}
-
-async function applyUnitFilter() {
-    console.log('Aplicando filtro de unidades...');
-    const checkboxes = document.querySelectorAll('.unit-checkbox:checked');
-    const unitsToRemove = Array.from(checkboxes).map(cb => cb.value);
-    console.log('Unidades a remover:', unitsToRemove);
-
-    if (unitsToRemove.length === availableUnits.length && availableUnits.length > 0) {
-        document.getElementById('filterError').textContent = 'Não é possível remover todas as unidades.';
-        return;
-    }
-
-    if (unitsToRemove.length > 0) {
-        planilhaData = planilhaData.filter(row => {
-            const unitKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'unidade');
-            const unit = unitKey && row[unitKey] !== undefined ? String(row[unitKey]).trim() : '';
-            return !unitsToRemove.includes(unit);
-        });
-        console.log('Dados após filtro:', planilhaData.length, 'registros');
-    }
-
-    if (planilhaData.length === 0) {
-        document.getElementById('filterError').textContent = 'Nenhum dado restante após o filtro. Ajuste a seleção.';
-        return;
-    }
-
-    try {
-        await saveDataToServer();
-        showAnalysisScreen();
-    } catch (error) {
-        console.error('Erro em applyUnitFilter:', error);
-        document.getElementById('filterError').textContent = 'Erro ao salvar dados. Tente novamente.';
-    }
-}
-
-async function skipUnitFilter() {
-    console.log('Prosseguindo sem remover unidades.');
-    try {
-        await saveDataToServer();
-        showAnalysisScreen();
-    } catch (error) {
-        console.error('Erro em skipUnitFilter:', error);
-        document.getElementById('filterError').textContent = 'Erro ao salvar dados. Tente novamente.';
-    }
 }
 
 async function saveDataToServer() {
@@ -450,8 +351,8 @@ function showAnalysisScreen() {
     }
 }
 
-function showUnitCountChart() {
-    console.log('Exibindo gráfico de unidades...');
+function showUnitCountChart(type) {
+    console.log(`Exibindo gráfico de unidades (${type})...`);
     if (!planilhaData) {
         console.error('Nenhum dado carregado.');
         document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload ou selecione uma data.';
@@ -459,7 +360,12 @@ function showUnitCountChart() {
     }
 
     try {
-        const { unitCount, sortedUnits } = processUnitData(planilhaData);
+        const filteredData = filterDataByUnits(planilhaData, type);
+        if (filteredData.length === 0) {
+            document.getElementById('analysisError').textContent = 'Nenhum dado disponível para as unidades selecionadas.';
+            return;
+        }
+        const { unitCount, sortedUnits } = processUnitData(filteredData);
         if (unitChartInstance) unitChartInstance.destroy();
         unitChartInstance = renderUnitChart('unitChart', sortedUnits, unitCount);
         document.getElementById('unitChartContainer').style.display = 'block';
@@ -472,8 +378,8 @@ function showUnitCountChart() {
     }
 }
 
-function showStatusCountChart() {
-    console.log('Exibindo gráfico de status...');
+function showStatusCountChart(type) {
+    console.log(`Exibindo gráfico de status (${type})...`);
     if (!planilhaData) {
         console.error('Nenhum dado carregado.');
         document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload ou selecione uma data.';
@@ -481,7 +387,12 @@ function showStatusCountChart() {
     }
 
     try {
-        const { statusCount, sortedStatuses } = processStatusData(planilhaData);
+        const filteredData = filterDataByUnits(planilhaData, type);
+        if (filteredData.length === 0) {
+            document.getElementById('analysisError').textContent = 'Nenhum dado disponível para as unidades selecionadas.';
+            return;
+        }
+        const { statusCount, sortedStatuses } = processStatusData(filteredData);
         if (statusChartInstance) statusChartInstance.destroy();
         statusChartInstance = renderStatusChart('statusChart', sortedStatuses, statusCount);
         document.getElementById('unitChartContainer').style.display = 'none';
@@ -494,8 +405,8 @@ function showStatusCountChart() {
     }
 }
 
-function showAvailabilityTable() {
-    console.log('Exibindo tabela de disponibilidade...');
+function showAvailabilityTable(type) {
+    console.log(`Exibindo tabela de disponibilidade (${type})...`);
     if (!planilhaData) {
         console.error('Nenhum dado carregado.');
         document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload ou selecione uma data.';
@@ -503,7 +414,12 @@ function showAvailabilityTable() {
     }
 
     try {
-        const { sortedUnits, availability, hasUnitColumn, hasStatusColumn, errorMessage } = processAvailabilityData(planilhaData);
+        const filteredData = filterDataByUnits(planilhaData, type);
+        if (filteredData.length === 0) {
+            document.getElementById('analysisError').textContent = 'Nenhum dado disponível para as unidades selecionadas.';
+            return;
+        }
+        const { sortedUnits, availability, hasUnitColumn, hasStatusColumn, errorMessage } = processAvailabilityData(filteredData);
         console.log('sortedUnits:', sortedUnits);
         console.log('availability:', availability);
         if (!hasUnitColumn || !hasStatusColumn) {
@@ -681,12 +597,8 @@ function importHistory() {
 
 function goBack() {
     console.log('Voltando...');
-    if (historicalData) {
-        showScreen('initialScreen');
-        loadWeeklyTotals();
-    } else {
-        showScreen('filterScreen');
-    }
+    showScreen('initialScreen');
+    loadWeeklyTotals();
 }
 
 function goBackFromHistory() {
