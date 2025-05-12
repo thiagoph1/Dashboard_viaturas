@@ -96,6 +96,7 @@ function renderAvailabilityChart(canvasId, sortedUnits, availability) {
             ]
         },
         options: {
+            maintainAspectRatio: false,
             plugins: {
                 datalabels: {
                     anchor: 'end',
@@ -104,7 +105,18 @@ function renderAvailabilityChart(canvasId, sortedUnits, availability) {
                 }
             },
             scales: {
-                y: { beginAtZero: true }
+                x: {
+                    ticks: {
+                        font: {
+                            size: 12 // Aumentar tamanho da fonte dos rótulos
+                        },
+                        maxRotation: 45, // Rotacionar rótulos para melhor legibilidade
+                        minRotation: 45
+                    }
+                },
+                y: {
+                    beginAtZero: true
+                }
             }
         }
     });

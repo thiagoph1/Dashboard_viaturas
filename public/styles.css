@@ -1,81 +1,57 @@
-body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 20px;
-    background-color: #f4f4f4;
-}
-
 .screen {
     display: none;
-    background: white;
-    padding: 20px;
-    border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    max-width: 800px;
-    margin: 0 auto;
+    text-align: center;
 }
 
 .screen.active {
     display: block;
 }
 
-h1, h2 {
-    color: #333;
-}
-
-button {
-    padding: 10px 20px;
-    margin: 5px;
-    background-color: #007BFF;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-button:hover {
-    background-color: #0056b3;
+.viatura-image {
+    max-width: 100%;
+    height: auto;
+    margin: 20px 0;
 }
 
 .error {
     color: red;
-    font-weight: bold;
-}
-
-canvas {
-    max-width: 100%;
+    margin: 10px 0;
 }
 
 table {
-    width: 100%;
+    width: 80%;
+    margin: 20px auto;
     border-collapse: collapse;
-    margin: 20px 0;
+}
+
+table, th, td {
+    border: 1px solid black;
 }
 
 th, td {
     padding: 10px;
-    border: 1px solid #ddd;
-    text-align: left;
+    text-align: center;
 }
 
 th {
-    background-color: #007BFF;
-    color: white;
+    background-color: #f2f2f2;
     cursor: pointer;
 }
 
-th:hover {
-    background-color: #0056b3;
+button {
+    margin: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
 }
 
-tr:hover {
-    background-color: #f0f0f0;
-}
-
-.viatura-image {
-    display: block;
-    max-width: 600px;
-    height: auto;
+#availabilityTableContainer {
+    width: 100%;
+    overflow-x: auto; /* Permitir rolagem horizontal */
     margin: 20px auto;
-    border-radius: 5px;
+}
+
+#availabilityChart {
+    width: 1200px !important; /* Largura fixa para o canvas */
+    height: 600px !important; /* Altura ajustada */
+    max-width: none !important;
 }

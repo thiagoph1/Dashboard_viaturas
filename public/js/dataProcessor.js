@@ -72,7 +72,7 @@ function processAvailabilityData(data) {
         if (statusKey) hasStatusColumn = true;
 
         const unit = unitKey && row[unitKey] !== undefined ? String(row[unitKey]).trim() : '';
-        const status = statusKey && row[statusKey] !== undefined ? String(row[statusKey]).trim().toLowerCase() : '';
+        const status = statusKey && row[unitKey] !== undefined ? String(row[statusKey]).trim().toLowerCase() : '';
 
         if (unit) {
             unitCount[unit] = (unitCount[unit] || 0) + 1;
@@ -88,17 +88,23 @@ function processAvailabilityData(data) {
         }
     });
 
-    const sortedUnits = Object.keys(unitCount).sort();
-    const availabilityArray = sortedUnits.map(unit => ({
+    // Criar array de disponibilidade
+    const availabilityArray = Object.keys(unitCount).map(unit => ({
         unit,
         available: availability[unit]?.available || 0,
         unavailable: availability[unit]?.unavailable || 0,
         total: (availability[unit]?.available || 0) + (availability[unit]?.unavailable || 0)
     }));
 
+    // Ordenar pelo total em ordem decrescente
+    availabilityArray.sort((a, b) => b.total - a.total);
+
+    // Derivar sortedUnits da ordem de availabilityArray
+    const sortedUnits = availabilityArray.map(item => item.unit);
+
     // Logs para depuração
-    console.log('sortedUnits:', sortedUnits);
-    console.log('availability:', availabilityArray);
+    console.log('sortedUnits (ordenado por total):', sortedUnits);
+    console.log('availability (ordenado por total):', availabilityArray);
     console.log('Valores únicos de StatusPatrimonio:', [...new Set(data.map(row => {
         const statusKey = Object.keys(row).find(key => key.toLowerCase().replace(/\s+/g, '') === 'statuspatrimonio');
         return statusKey && row[statusKey] !== undefined ? String(row[statusKey]).trim() : '';
