@@ -10,6 +10,7 @@ let statusChartInstance = null;
 let availabilityChartInstance = null;
 let historyChartInstance = null;
 let currentSort = { column: 'total', direction: 'desc' };
+let currentType = 'all'; // Rastreia o tipo atual (sistran ou all)
 const SISTRAN_UNITS = [
     'AFA', 'BAAN', 'BABV', 'BACG', 'BAFL', 'BAFZ', 'BANT', 'BAPV', 'BASC', 'BASM', 'BASV',
     'CISCEA', 'CLA', 'COMARA', 'CPBV-CC', 'CRCEA-SE', 'DACTA I', 'DACTA II', 'DACTA III',
@@ -414,6 +415,7 @@ function showAvailabilityTable(type) {
     }
 
     try {
+        currentType = type; // Armazenar o tipo atual
         const filteredData = filterDataByUnits(planilhaData, type);
         if (filteredData.length === 0) {
             document.getElementById('analysisError').textContent = 'Nenhum dado disponível para as unidades selecionadas.';
@@ -442,8 +444,8 @@ function showAvailabilityTable(type) {
     }
 }
 
-function showAvailabilityChart() {
-    console.log('Exibindo gráfico de disponibilidade...');
+function showAvailabilityChart(type) {
+    console.log(`Exibindo gráfico de disponibilidade (${type})...`);
     if (!planilhaData) {
         console.error('Nenhum dado carregado.');
         document.getElementById('analysisError').textContent = 'Nenhum dado carregado. Volte e faça upload ou selecione uma data.';
@@ -451,8 +453,20 @@ function showAvailabilityChart() {
     }
 
     try {
-        const { sortedUnits, availability } = processAvailabilityData(planilhaData);
-        if (availabilityChartInstance) availabilityChartInstance.destroy();
+        const filteredData = filterDataByUnits(planilhaData, type);
+        if (filteredData.length === 0) {
+            document.getElementById('analysisError').textContent = 'Nenhum dado disponível para as unidades selecionadas.';
+            return;
+        }
+        const { sortedUnits, availability } = processAvailabilityData(filteredData);
+        if (!availability || availability.length === 0) {
+            document.getElementById('analysisError').textContent = 'Nenhum dado de disponibilidade disponível.';
+            return;
+        }
+        if (availabilityChartInstance) {
+            availabilityChartInstance.destroy();
+            availabilityChartInstance = null;
+        }
         availabilityChartInstance = renderAvailabilityChart('availabilityChart', sortedUnits, availability);
         document.getElementById('availabilityTable').style.display = 'none';
         document.getElementById('availabilityChart').style.display = 'block';
@@ -461,7 +475,7 @@ function showAvailabilityChart() {
         document.getElementById('analysisError').textContent = '';
     } catch (error) {
         console.error('Erro em showAvailabilityChart:', error);
-        document.getElementById('analysisError').textContent = 'Erro ao exibir gráfico de disponibilidade.';
+        document.getElementById('analysisError').textContent = 'Erro ao exibir gráfico de disponibilidade: ' + error.message;
     }
 }
 
